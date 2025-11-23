@@ -1,0 +1,7 @@
+{
+  "description": "Proxi App - Real-time discovery MVP",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "name": "Proxi App"
+}
