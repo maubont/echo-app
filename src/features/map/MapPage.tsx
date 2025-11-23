@@ -15,6 +15,8 @@ import { AppContextMode, MapEntity } from '../../lib/types';
 import { StatusModal } from '../../components/map/StatusModal';
 import { CATEGORY_OPTIONS, MODE_ICONS } from '../../lib/constants';
 import { PresenceService } from '../../services/presence';
+import { locationService } from '../../services/location';
+import { statusService } from '../../services/status';
 
 // Fix for Leaflet plugins that rely on global L
 if (typeof window !== 'undefined') {
@@ -104,7 +106,7 @@ export const MapPage = () => {
     const [maxDistance, setMaxDistance] = useState<number>(5000); // meters
     const [showFilters, setShowFilters] = useState(false);
 
-    // Load entities ONLY if we have a location
+    // Load entities from Supabase - Real-time location and status tracking
     useEffect(() => {
         if (!coords) {
             setEntities([]);
@@ -113,33 +115,100 @@ export const MapPage = () => {
 
         setEntitiesLoading(true);
 
-        // Simulate API call
-        const timer = setTimeout(() => {
-            const baseLat = coords.lat;
-            const baseLng = coords.lng;
-            const newEntities: MapEntity[] = [];
+        // Subscribe to real-time location updates
+        const unsubscribeLocations = locationService.subscribeToNearbyLocations(async (locations) => {
+            // Fetch statuses for these users
+            const statuses = await statusService.fetchActiveStatuses();
+            const statusMap = new Map(statuses.map(s => [s.userId, s]));
 
-            for (let i = 0; i < 30; i++) {
-                const mode = i % 2 === 0 ? 'networking' : 'social';
-                newEntities.push({
-                    id: `ent-${i}`,
-                    lat: baseLat + (Math.random() - 0.5) * 0.015,
-                    lng: baseLng + (Math.random() - 0.5) * 0.015,
-                    type: i % 5 === 0 ? 'business' : 'person',
-                    mode: mode as AppContextMode,
-                    categories: [CATEGORY_OPTIONS[mode as AppContextMode][Math.floor(Math.random() * 3)]],
-                    name: i % 5 === 0 ? `Negocio ${i}` : `Usuario ${i}`,
+            // Convert locations to MapEntities
+            const newEntities: MapEntity[] = locations.map(loc => {
+                const status = statusMap.get(loc.id);
+                return {
+                    id: loc.id,
+                    lat: loc.latitude,
+                    lng: loc.longitude,
+                    type: 'person', // TODO: Get from profile
+                    mode: session?.user.currentMode || 'networking',
+                    categories: [], // TODO: Get from profile
+                    name: `Usuario ${loc.id.substring(0, 6)}`, // TODO: Get from profile
                     description: 'Disponible para conectar.',
-                    avatarUrl: `https://ui-avatars.com/api/?name=${i % 5 === 0 ? `Negocio ${i}` : `Usuario ${i}`}&background=random`,
-                    lastSeen: Date.now()
-                });
-            }
+                    avatarUrl: `https://ui-avatars.com/api/?name=User`,
+                    lastSeen: new Date(loc.updatedAt).getTime(),
+                    status: status ? {
+                        emoji: status.emoji,
+                        text: status.text,
+                        createdAt: status.createdAt,
+                        expiresAt: status.expiresAt
+                    } : undefined
+                };
+            });
+
             setEntities(newEntities);
             setEntitiesLoading(false);
-        }, 1000);
+        });
 
-        return () => clearTimeout(timer);
-    }, [coords, session?.user.currentMode]);
+        // Subscribe to real-time status updates
+        const unsubscribeStatuses = statusService.subscribeToStatuses(async () => {
+            // Refresh locations to get updated statuses
+            const locations = await locationService.fetchNearbyLocations(maxDistance);
+            const statuses = await statusService.fetchActiveStatuses();
+            const statusMap = new Map(statuses.map(s => [s.userId, s]));
+
+            const newEntities: MapEntity[] = locations.map(loc => {
+                const status = statusMap.get(loc.id);
+                return {
+                    id: loc.id,
+                    lat: loc.latitude,
+                    lng: loc.longitude,
+                    type: 'person',
+                    mode: session?.user.currentMode || 'networking',
+                    categories: [],
+                    name: `Usuario ${loc.id.substring(0, 6)}`,
+                    description: 'Disponible para conectar.',
+                    avatarUrl: `https://ui-avatars.com/api/?name=User`,
+                    lastSeen: new Date(loc.updatedAt).getTime(),
+                    status: status ? {
+                        emoji: status.emoji,
+                        text: status.text,
+                        createdAt: status.createdAt,
+                        expiresAt: status.expiresAt
+                    } : undefined
+                };
+            });
+
+            setEntities(newEntities);
+        });
+
+        // Start broadcasting own location
+        locationService.startBroadcasting(
+            () => new Promise((resolve, reject) => {
+                if (!coords) {
+                    reject(new Error('No coordinates'));
+                    return;
+                }
+                resolve({
+                    coords: {
+                        latitude: coords.lat,
+                        longitude: coords.lng,
+                        accuracy: 10,
+                        altitude: null,
+                        altitudeAccuracy: null,
+                        heading: null,
+                        speed: null
+                    },
+                    timestamp: Date.now()
+                } as GeolocationPosition);
+            }),
+            10000 // Update every 10 seconds
+        );
+
+        return () => {
+            unsubscribeLocations();
+            unsubscribeStatuses();
+            locationService.stopBroadcasting();
+        };
+    }, [coords, session?.user.currentMode, maxDistance]);
 
     // Initialize Map
     useEffect(() => {
@@ -349,22 +418,18 @@ export const MapPage = () => {
 
     const [showStatusModal, setShowStatusModal] = useState(false);
 
-    const handleStatusSave = (status: any) => {
-        if (coords) {
-            const myEntity: MapEntity = {
-                id: session?.user.id || 'me',
-                lat: coords.lat + 0.0005,
-                lng: coords.lng + 0.0005,
-                type: 'person',
-                mode: session?.user.currentMode || 'networking',
-                categories: [],
-                name: session?.user.name || 'Yo',
-                description: session?.user.bio || 'Mi estado actual',
-                avatarUrl: session?.user.avatarUrl,
-                lastSeen: Date.now(),
-                status: status
-            };
-            setEntities(prev => [...prev, myEntity]);
+    const handleStatusSave = async (status: any) => {
+        try {
+            // Save status to Supabase
+            await statusService.setStatus(
+                status.emoji,
+                status.text,
+                (status.expiresAt - status.createdAt) / (1000 * 60 * 60) // Convert to hours
+            );
+            // The real-time subscription will automatically update the UI
+        } catch (error) {
+            console.error('Error saving status:', error);
+            // TODO: Show error toast to user
         }
     };
 
