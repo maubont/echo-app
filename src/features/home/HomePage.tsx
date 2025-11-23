@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
-import { Eye, EyeOff, MapPin, MessageCircle, Settings } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Eye, EyeOff, MapPin, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePresence } from '../../context/PresenceContext';
 import { useGeoLocation } from '../../hooks/useGeoLocation';
+import { locationService } from '../../services/location';
 
 export const HomePage = () => {
     const { session } = useAuth();
@@ -11,9 +12,24 @@ export const HomePage = () => {
     const { coords } = useGeoLocation();
     const navigate = useNavigate();
 
+    const [loading, setLoading] = useState(false);
+
     useEffect(() => {
         if (coords) syncLocation(coords.lat, coords.lng);
     }, [coords]);
+
+    const handleToggleVisibility = async () => {
+        setLoading(true);
+        try {
+            await toggleVisibility();
+        } catch (error) {
+            console.error("Error toggling visibility:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const isVisible = presence.isVisible;
 
     return (
         <div className="h-screen bg-slate-50 p-6 flex flex-col">
@@ -21,8 +37,8 @@ export const HomePage = () => {
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">Hola, {session?.user.name.split(' ')[0]} 👋</h1>
                     <p className="text-slate-500 text-sm flex items-center gap-1">
-                        <span className="w-2 h-2 bg-green-500 rounded-full inline-block"></span>
-                        En línea
+                        <span className={`w-2 h-2 rounded-full inline-block ${isVisible ? 'bg-green-500' : 'bg-slate-400'}`}></span>
+                        {isVisible ? 'En línea' : 'Desconectado'}
                     </p>
                 </div>
                 <div onClick={() => navigate('/profile')} className="w-10 h-10 bg-slate-200 rounded-full overflow-hidden border-2 border-white shadow cursor-pointer">
@@ -30,24 +46,25 @@ export const HomePage = () => {
                 </div>
             </header>
 
-            <div className={`rounded-3xl p-6 text-white shadow-xl mb-6 transition-all relative overflow-hidden ${presence.isVisible ? 'bg-blue-600' : 'bg-slate-800'}`}>
-                {presence.isVisible && <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />}
+            <div className={`rounded-3xl p-6 text-white shadow-xl mb-6 transition-all relative overflow-hidden ${isVisible ? 'bg-blue-600' : 'bg-slate-800'}`}>
+                {isVisible && <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />}
 
                 <div className="flex justify-between items-start mb-4 relative z-10">
                     <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
-                        {presence.isVisible ? <Eye size={24} /> : <EyeOff size={24} />}
+                        {isVisible ? <Eye size={24} /> : <EyeOff size={24} />}
                     </div>
-                    {presence.isVisible && <span className="text-[10px] font-bold bg-white/20 px-2 py-1 rounded backdrop-blur-sm">EXPIRA: 59m</span>}
+                    {isVisible && <span className="text-[10px] font-bold bg-white/20 px-2 py-1 rounded backdrop-blur-sm">ACTIVO</span>}
                 </div>
-                <h2 className="text-2xl font-bold mb-1 relative z-10">{presence.isVisible ? 'Estás Visible' : 'Estás Oculto'}</h2>
+                <h2 className="text-2xl font-bold mb-1 relative z-10">{isVisible ? 'Estás Visible' : 'Estás Oculto'}</h2>
                 <p className="text-blue-100 text-xs mb-6 relative z-10 leading-relaxed opacity-90">
-                    {presence.isVisible ? 'Tu ubicación aproximada se muestra en el mapa para otros usuarios en modo ' + session?.user.currentMode : 'Nadie puede ver tu ubicación en el mapa.'}
+                    {isVisible ? 'Tu ubicación aproximada se muestra en el mapa para otros usuarios.' : 'Nadie puede ver tu ubicación en el mapa.'}
                 </p>
                 <button
-                    onClick={() => toggleVisibility()}
-                    className="w-full bg-white text-slate-900 py-3 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors shadow-lg active:scale-[0.98]"
+                    onClick={handleToggleVisibility}
+                    disabled={loading}
+                    className="w-full bg-white text-slate-900 py-3 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors shadow-lg active:scale-[0.98] disabled:opacity-70"
                 >
-                    {presence.isVisible ? 'Ocultarme Ahora' : 'Hacerme Visible'}
+                    {loading ? 'Actualizando...' : (isVisible ? 'Ocultarme Ahora' : 'Hacerme Visible')}
                 </button>
             </div>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, MessageCircle, MoreVertical, Phone, Send, Smile } from 'lucide-react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { ChatConversation } from '../../lib/types';
@@ -10,7 +10,13 @@ export const ChatPage = () => {
     const { session } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const [searchParams] = useSearchParams();
+
+    // Get params from state OR URL query params
     const stateParams = location.state as { userId?: string, userName?: string, userAvatar?: string } | null;
+    const targetUserId = stateParams?.userId || searchParams.get('userId');
+    const targetUserName = stateParams?.userName || searchParams.get('userName');
+    const targetUserAvatar = stateParams?.userAvatar || searchParams.get('userAvatar');
 
     const [activeChatId, setActiveChatId] = useState<string | null>(null);
     const [conversations, setConversations] = useState<ChatConversation[]>([]);
@@ -32,12 +38,14 @@ export const ChatPage = () => {
         const loadConversations = async () => {
             if (!session) return;
 
+            console.log('💬 ChatPage loading. Target:', targetUserId);
+
             // If navigating from map with target user, create/open conversation
-            if (stateParams?.userId) {
+            if (targetUserId) {
                 try {
                     const conversationId = await chatService.getOrCreateConversation([
                         session.user.id,
-                        stateParams.userId
+                        targetUserId
                     ]);
                     setActiveChatId(conversationId);
 
@@ -45,9 +53,9 @@ export const ChatPage = () => {
                     const messages = await chatService.fetchMessages(conversationId);
                     const tempConv: ChatConversation = {
                         id: conversationId,
-                        participantId: stateParams.userId,
-                        participantName: stateParams.userName || 'Usuario',
-                        participantAvatar: stateParams.userAvatar,
+                        participantId: targetUserId,
+                        participantName: targetUserName || 'Usuario',
+                        participantAvatar: targetUserAvatar,
                         lastMessage: messages[messages.length - 1]?.content || '',
                         lastTimestamp: messages[messages.length - 1] ? new Date(messages[messages.length - 1].createdAt).getTime() : Date.now(),
                         unreadCount: 0,
@@ -62,11 +70,54 @@ export const ChatPage = () => {
                 } catch (error) {
                     console.error('Error creating conversation:', error);
                 }
+            } else {
+                // Load list of existing conversations
+                try {
+                    const list = await chatService.getChatList();
+                    setConversations(list);
+                } catch (error) {
+                    console.error('Error loading chat list:', error);
+                }
             }
         };
 
         loadConversations();
-    }, [stateParams, session]);
+    }, [targetUserId, targetUserName, targetUserAvatar, session]);
+
+    // Subscribe to real-time updates for the list
+    useEffect(() => {
+        if (!session || activeChatId) return; // Don't play sound if already in chat (handled by other sub)
+
+        const unsubscribe = chatService.subscribeToAllConversations(session.user.id, (newMessage) => {
+            // Play notification sound
+            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); // Simple beep
+            audio.play().catch(e => console.log('Audio play failed (user interaction needed):', e));
+
+            // Update conversations list
+            setConversations(prev => {
+                const existingConv = prev.find(c => c.id === newMessage.conversation_id);
+
+                if (existingConv) {
+                    // Move to top and update
+                    const updatedConv = {
+                        ...existingConv,
+                        lastMessage: newMessage.content,
+                        lastTimestamp: new Date(newMessage.created_at).getTime(),
+                        unreadCount: existingConv.unreadCount + 1
+                    };
+                    return [updatedConv, ...prev.filter(c => c.id !== newMessage.conversation_id)];
+                } else {
+                    // New conversation? We might need to fetch it, but for now just ignore or reload
+                    // Ideally we fetch the new conversation details here
+                    return prev;
+                }
+            });
+        });
+
+        return () => {
+            unsubscribe();
+        };
+    }, [session, activeChatId]);
 
     const handleSend = async () => {
         if (!inputText.trim() || !activeChatId || !session) return;
@@ -100,6 +151,30 @@ export const ChatPage = () => {
         }
     };
 
+    const handleChatClick = async (chatId: string) => {
+        setActiveChatId(chatId);
+        // Fetch full message history when opening a chat from list
+        try {
+            const messages = await chatService.fetchMessages(chatId);
+            setConversations(prev => prev.map(c => {
+                if (c.id === chatId) {
+                    return {
+                        ...c,
+                        messages: messages.map(m => ({
+                            id: m.id,
+                            senderId: m.senderId,
+                            text: m.content,
+                            timestamp: new Date(m.createdAt).getTime()
+                        }))
+                    };
+                }
+                return c;
+            }));
+        } catch (error) {
+            console.error('Error fetching messages for chat:', error);
+        }
+    };
+
     const activeChat = conversations.find(c => c.id === activeChatId);
 
     // View: Chat List
@@ -120,7 +195,7 @@ export const ChatPage = () => {
                         conversations.map(chat => (
                             <div
                                 key={chat.id}
-                                onClick={() => setActiveChatId(chat.id)}
+                                onClick={() => handleChatClick(chat.id)}
                                 className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer border-b border-slate-50 last:border-0"
                             >
                                 <div className="relative">
@@ -222,7 +297,7 @@ export const ChatPage = () => {
             </div>
 
             {/* Input */}
-            <div className="fixed bottom-20 left-0 right-0 p-3 bg-white border-t border-slate-100 z-50">
+            <div className="fixed bottom-24 left-0 right-0 p-3 bg-white border-t border-slate-100 z-50 max-w-md mx-auto">
                 <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-full border border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
                     <input
                         className="flex-1 bg-transparent px-4 py-2 text-sm outline-none placeholder:text-slate-400"
@@ -234,7 +309,7 @@ export const ChatPage = () => {
                     <button
                         onClick={handleSend}
                         disabled={!inputText.trim()}
-                        className="bg-blue-600 text-white p-2.5 rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                        className="bg-blue-600 text-white p-2.5 rounded-full hover:bg-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
                     >
                         <Send size={18} />
                     </button>

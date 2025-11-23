@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { MessageCircle, Settings, X, Navigation, Filter, Sliders } from 'lucide-react';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { X, MessageCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -181,27 +181,30 @@ export const MapPage = () => {
         });
 
         // Start broadcasting own location
-        locationService.startBroadcasting(
-            () => new Promise((resolve, reject) => {
-                if (!coords) {
-                    reject(new Error('No coordinates'));
-                    return;
-                }
-                resolve({
-                    coords: {
-                        latitude: coords.lat,
-                        longitude: coords.lng,
-                        accuracy: 10,
-                        altitude: null,
-                        altitudeAccuracy: null,
-                        heading: null,
-                        speed: null
-                    },
-                    timestamp: Date.now()
-                } as GeolocationPosition);
-            }),
-            10000 // Update every 10 seconds
-        );
+        if (session?.user?.id) {
+            locationService.startBroadcasting(
+                session.user.id,
+                () => new Promise((resolve, reject) => {
+                    if (!coords) {
+                        reject(new Error('No coordinates'));
+                        return;
+                    }
+                    resolve({
+                        coords: {
+                            latitude: coords.lat,
+                            longitude: coords.lng,
+                            accuracy: 10,
+                            altitude: null,
+                            altitudeAccuracy: null,
+                            heading: null,
+                            speed: null
+                        },
+                        timestamp: Date.now()
+                    } as GeolocationPosition);
+                }),
+                10000 // Update every 10 seconds
+            );
+        }
 
         return () => {
             unsubscribeLocations();
@@ -293,26 +296,22 @@ export const MapPage = () => {
     const allCategories = session?.user.currentMode ? CATEGORY_OPTIONS[session.user.currentMode] : [];
 
     // Update Map Markers & View
+    const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
+
     useEffect(() => {
-        if (!mapRef.current) return;
+        if (!mapRef.current || !markersGroupRef.current) return;
         const map = mapRef.current;
         const clusterGroup = markersGroupRef.current;
 
-        if (coords) {
-            // Optional: map.setView([coords.lat, coords.lng], 16);
-        }
-
-        if (clusterGroup) clusterGroup.clearLayers();
-
+        // 1. Handle User's Own Indicator (Blue Dot)
+        // Clear previous user indicators
         map.eachLayer(layer => {
             if ((layer as any).options?.icon?.options?.className?.includes('user-indicator')) map.removeLayer(layer);
         });
 
         if (presence.isVisible && coords) {
             const jittered = PresenceService.applyJitter(coords.lat, coords.lng);
-
             L.circle([coords.lat, coords.lng], { radius: 100, color: 'transparent', fillColor: '#3b82f6', fillOpacity: 0.1 }).addTo(map);
-
             const userIcon = L.divIcon({
                 className: 'user-indicator',
                 html: `<div class="w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-lg ring-4 ring-blue-500/30"></div>`,
@@ -321,13 +320,22 @@ export const MapPage = () => {
             L.marker([jittered.lat, jittered.lng], { icon: userIcon }).addTo(map);
         }
 
-        const markers: L.Marker[] = [];
+        // 2. Handle Other Users/Entities (Diffing Logic)
+        const currentEntityIds = new Set(filteredEntities.map(e => e.id));
 
+        // Remove markers that are no longer visible
+        markersMapRef.current.forEach((marker, id) => {
+            if (!currentEntityIds.has(id)) {
+                clusterGroup.removeLayer(marker);
+                markersMapRef.current.delete(id);
+            }
+        });
+
+        // Update or Create markers
         filteredEntities.forEach(ent => {
             if (ent.mode !== session?.user.currentMode && ent.type !== 'business') return;
 
             const hasStatus = ent.status && ent.status.expiresAt > Date.now();
-
             const iconHtml = hasStatus
                 ? `<div class="relative">
                      <div class="w-12 h-12 bg-white rounded-full shadow-lg border-2 border-blue-500 flex items-center justify-center text-2xl animate-in zoom-in">
@@ -348,33 +356,54 @@ export const MapPage = () => {
                 iconAnchor: hasStatus ? [24, 24] : [20, 20]
             });
 
-            const marker = L.marker([ent.lat, ent.lng], { icon: customIcon })
-                .bindPopup(`
-                    <div class="p-2 min-w-[200px]">
-                        <div class="flex items-center gap-3 mb-2">
-                            <img src="${ent.avatarUrl || `https://ui-avatars.com/api/?name=${ent.name}`}" class="w-10 h-10 rounded-full object-cover" />
-                            <div>
-                                <h3 class="font-bold text-slate-900">${ent.name}</h3>
-                                <p class="text-xs text-slate-500 capitalize">${ent.mode}</p>
-                            </div>
+            const popupContent = `
+                <div class="p-2 min-w-[200px]">
+                    <div class="flex items-center gap-3 mb-2">
+                        <img src="${ent.avatarUrl || `https://ui-avatars.com/api/?name=${ent.name}`}" class="w-10 h-10 rounded-full object-cover" />
+                        <div>
+                            <h3 class="font-bold text-slate-900">${ent.name}</h3>
+                            <p class="text-xs text-slate-500 capitalize">${ent.mode}</p>
                         </div>
-                        ${hasStatus ? `
-                            <div class="bg-blue-50 p-2 rounded-lg mb-2 border border-blue-100">
-                                <p class="text-sm text-blue-800 font-medium">"${ent.status!.text}"</p>
-                                <p class="text-[10px] text-blue-400 mt-1">Expira en ${Math.ceil((ent.status!.expiresAt - Date.now()) / (1000 * 60 * 60))}h</p>
-                            </div>
-                        ` : ''}
-                        <p class="text-sm text-slate-600 mb-3">${ent.description}</p>
-                        <button onclick="window.location.href='/chat?userId=${ent.id}'" class="w-full bg-slate-900 text-white py-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors">
-                            Mensaje
-                        </button>
                     </div>
-                `);
+                    ${hasStatus ? `
+                        <div class="bg-blue-50 p-2 rounded-lg mb-2 border border-blue-100">
+                            <p class="text-sm text-blue-800 font-medium">"${ent.status!.text}"</p>
+                            <p class="text-[10px] text-blue-400 mt-1">Expira en ${Math.ceil((ent.status!.expiresAt - Date.now()) / (1000 * 60 * 60))}h</p>
+                        </div>
+                    ` : ''}
+                    <p class="text-sm text-slate-600 mb-3">${ent.description}</p>
+                    <button onclick="window.location.href='/chat?userId=${ent.id}'" class="w-full bg-slate-900 text-white py-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors">
+                        Mensaje
+                    </button>
+                </div>
+            `;
 
-            markers.push(marker);
+            if (markersMapRef.current.has(ent.id)) {
+                // UPDATE existing marker
+                const marker = markersMapRef.current.get(ent.id)!;
+                const currentLatLng = marker.getLatLng();
+
+                // Only update position if changed significantly (optional optimization)
+                if (currentLatLng.lat !== ent.lat || currentLatLng.lng !== ent.lng) {
+                    marker.setLatLng([ent.lat, ent.lng]);
+                }
+
+                marker.setIcon(customIcon);
+
+                // Update popup content only if not open? Or always?
+                // If we update popup content while open, Leaflet might handle it or we might need to check
+                if (marker.getPopup()) {
+                    marker.setPopupContent(popupContent);
+                }
+            } else {
+                // CREATE new marker
+                const marker = L.marker([ent.lat, ent.lng], { icon: customIcon })
+                    .bindPopup(popupContent);
+
+                clusterGroup.addLayer(marker);
+                markersMapRef.current.set(ent.id, marker);
+            }
         });
-
-        if (clusterGroup) clusterGroup.addLayers(markers);
 
     }, [coords, filteredEntities, presence.isVisible]);
 
@@ -418,203 +447,116 @@ export const MapPage = () => {
 
     const [showStatusModal, setShowStatusModal] = useState(false);
 
-    const handleStatusSave = async (status: any) => {
+    const handleSaveStatus = async (status: any) => {
         try {
-            // Save status to Supabase
-            await statusService.setStatus(
-                status.emoji,
-                status.text,
-                (status.expiresAt - status.createdAt) / (1000 * 60 * 60) // Convert to hours
-            );
-            // The real-time subscription will automatically update the UI
+            const durationHours = Math.round((status.expiresAt - status.createdAt) / (1000 * 60 * 60));
+            await statusService.setStatus(status.emoji, status.text, durationHours);
         } catch (error) {
-            console.error('Error saving status:', error);
-            // TODO: Show error toast to user
+            console.error("Error saving status:", error);
         }
     };
 
     return (
-        <div className="h-screen w-full relative bg-slate-100">
-            <div ref={containerRef} className="absolute inset-0 z-0" />
+        <div className="h-screen flex flex-col bg-slate-50 relative">
+            {/* Map Container */}
+            <div ref={containerRef} className="flex-1 z-0" />
 
-            {/* Search Bar (Manual Location) */}
-            <div className="absolute top-20 left-4 right-4 z-20">
-                <form onSubmit={handleSearch} className="bg-white/90 backdrop-blur rounded-xl shadow-lg flex items-center p-2 gap-2">
-                    <input
-                        type="text"
-                        placeholder="Buscar ciudad (ej: La Gloria, Cesar)..."
-                        className="bg-transparent flex-1 outline-none text-sm px-2"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    <button type="submit" disabled={isSearching} className="bg-blue-600 text-white p-2 rounded-lg disabled:opacity-50">
-                        {isSearching ? <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" /> : <Navigation size={16} className="rotate-90" />}
-                    </button>
-                </form>
-            </div>
-
-            {/* Loading States */}
-            {(locLoading || entitiesLoading) && (
-                <div className="absolute top-32 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur shadow-sm px-4 py-2 rounded-full z-20 flex items-center gap-2 text-xs font-bold text-slate-600">
-                    <div className="animate-spin w-3 h-3 border-2 border-current border-t-transparent rounded-full text-blue-600" />
-                    {locLoading ? 'Obteniendo GPS...' : 'Buscando gente...'}
+            {/* Top Bar */}
+            <div className="absolute top-4 left-4 right-4 z-[400] flex gap-2">
+                <div className="flex-1 bg-white rounded-xl shadow-lg flex items-center p-2 border border-slate-100">
+                    <form onSubmit={handleSearch} className="flex-1 flex items-center">
+                        <input
+                            type="text"
+                            placeholder="Buscar lugares..."
+                            className="w-full bg-transparent outline-none text-slate-700 placeholder-slate-400 px-2"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </form>
                 </div>
-            )}
-
-            {/* Error State */}
-            {locError && !coords && (
-                <div className="absolute top-32 left-4 right-4 bg-red-50 border border-red-100 p-3 rounded-xl z-20 flex items-start gap-3 shadow-lg animate-in slide-in-from-top-2">
-                    <div className="text-red-500 shrink-0 mt-0.5"><X size={16} /></div>
-                    <div className="flex-1">
-                        <p className="text-xs font-bold text-red-800">Ubicación no disponible</p>
-                        <p className="text-[10px] text-red-600 mt-0.5">{locError}</p>
-                        <button
-                            onClick={() => getPosition()}
-                            className="mt-2 text-[10px] bg-red-100 text-red-700 px-2 py-1 rounded-md font-bold hover:bg-red-200 transition-colors"
-                        >
-                            Reintentar
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Context Selector (Top) */}
-            <div className="absolute top-4 left-4 right-4 z-10">
-                <div className="bg-white/90 backdrop-blur p-3 rounded-2xl shadow-lg flex justify-between items-center">
-                    <div>
-                        <p className="text-[10px] uppercase font-bold text-slate-400">Modo Actual</p>
-                        <p className="font-bold text-slate-800 capitalize flex items-center gap-2">
-                            {MODE_ICONS[session?.user.currentMode || 'networking']}
-                            {session?.user.currentMode || 'Cargando...'}
-                        </p>
-                        {coords && (
-                            <p className="text-[10px] text-blue-600 font-bold mt-1">
-                                {filteredEntities.length} personas cerca
-                            </p>
-                        )}
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setShowStatusModal(true)}
-                            className="bg-white/90 backdrop-blur p-2.5 rounded-full shadow-sm border border-white/50 text-slate-600 hover:text-blue-600 transition-colors"
-                        >
-                            <span className="text-xl">💭</span>
-                        </button>
-                        <button
-                            onClick={() => setShowFilters(!showFilters)}
-                            className={`p-2 rounded-xl text-slate-600 hover:bg-slate-200 transition-colors ${showFilters ? 'bg-blue-100' : 'bg-slate-100'}`}
-                        >
-                            <Sliders size={18} />
-                        </button>
-                        <button onClick={() => navigate('/profile')} className="bg-slate-100 p-2 rounded-xl text-slate-600 hover:bg-slate-200 transition-colors">
-                            <Settings size={18} />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Filter Panel */}
-                {showFilters && coords && (
-                    <div className="bg-white/90 backdrop-blur p-4 rounded-2xl shadow-lg mt-2 animate-in slide-in-from-top-2">
-                        <div className="flex items-center gap-2 mb-3">
-                            <Filter size={16} className="text-slate-600" />
-                            <h3 className="font-bold text-sm text-slate-800">Filtros</h3>
-                        </div>
-
-                        {/* Distance Slider */}
-                        <div className="mb-4">
-                            <div className="flex justify-between items-center mb-2">
-                                <label className="text-xs font-bold text-slate-600">Distancia máxima</label>
-                                <span className="text-xs font-bold text-blue-600">
-                                    {maxDistance >= 1000 ? `${(maxDistance / 1000).toFixed(1)} km` : `${maxDistance} m`}
-                                </span>
-                            </div>
-                            <input
-                                type="range"
-                                min="500"
-                                max="5000"
-                                step="500"
-                                value={maxDistance}
-                                onChange={(e) => setMaxDistance(Number(e.target.value))}
-                                className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                            />
-                        </div>
-
-                        {/* Category Filters */}
-                        <div>
-                            <label className="text-xs font-bold text-slate-600 block mb-2">Categorías</label>
-                            <div className="flex flex-wrap gap-2">
-                                {allCategories.map(cat => (
-                                    <button
-                                        key={cat}
-                                        onClick={() => toggleCategory(cat)}
-                                        className={`text - xs px - 3 py - 1.5 rounded - lg font - bold transition - colors ${selectedCategories.includes(cat)
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                            } `}
-                                    >
-                                        {cat}
-                                    </button>
-                                ))}
-                            </div>
-                            {selectedCategories.length > 0 && (
-                                <button
-                                    onClick={() => setSelectedCategories([])}
-                                    className="text-xs text-blue-600 font-bold mt-2 hover:underline"
-                                >
-                                    Limpiar filtros
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Recenter Button */}
-            <div className="absolute bottom-24 right-4 z-20">
                 <button
-                    onClick={handleRecenter}
-                    className="bg-white p-3 rounded-full shadow-lg text-blue-600 hover:bg-blue-50 transition-colors active:scale-95"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className={`w-12 h-12 rounded-xl shadow-lg flex items-center justify-center transition-colors ${showFilters ? 'bg-blue-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}
                 >
-                    <Navigation size={24} className={locLoading ? 'animate-pulse' : ''} />
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
                 </button>
             </div>
 
-            {/* Selected Entity Popup */}
-            {selectedEntity && !showProfileModal && (
-                <div className="absolute bottom-24 left-4 right-4 z-30">
-                    <div className="bg-white rounded-2xl p-4 shadow-2xl animate-in slide-in-from-bottom-5">
-                        <div className="flex justify-between items-start mb-2">
-                            <h3 className="font-bold text-lg">{selectedEntity.name}</h3>
-                            <button onClick={() => setSelectedEntity(null)}><X size={20} className="text-slate-400" /></button>
+            {/* Filters Panel */}
+            {showFilters && (
+                <div className="absolute top-20 left-4 right-4 z-[400] bg-white rounded-2xl shadow-xl p-4 animate-in slide-in-from-top-2 border border-slate-100">
+                    <div className="mb-4">
+                        <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">Distancia Máxima</h3>
+                        <input
+                            type="range"
+                            min="1000"
+                            max="50000"
+                            step="1000"
+                            value={maxDistance}
+                            onChange={(e) => setMaxDistance(parseInt(e.target.value))}
+                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                        <div className="flex justify-between text-xs text-slate-500 mt-1">
+                            <span>1 km</span>
+                            <span className="font-bold text-blue-600">{maxDistance / 1000} km</span>
+                            <span>50 km</span>
                         </div>
-                        <p className="text-sm text-slate-500 mb-4">{selectedEntity.description}</p>
-                        <div className="grid grid-cols-2 gap-3">
-                            <Button label="Ver Perfil" variant="secondary" size="sm" onClick={() => setShowProfileModal(true)} />
-                            <Button label="Conectar" size="sm" icon={<MessageCircle size={16} />} onClick={() => {
-                                setSelectedEntity(null);
-                                navigate('/chat', {
-                                    state: {
-                                        userId: selectedEntity.id,
-                                        userName: selectedEntity.name,
-                                        userAvatar: selectedEntity.avatarUrl
-                                    }
-                                });
-                            }} />
+                    </div>
+
+                    <div>
+                        <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">Categorías</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {allCategories.map(cat => (
+                                <button
+                                    key={cat}
+                                    onClick={() => toggleCategory(cat)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${selectedCategories.includes(cat)
+                                        ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                        }`}
+                                >
+                                    {cat}
+                                </button>
+                            ))}
                         </div>
                     </div>
                 </div>
             )}
 
-            {showProfileModal && selectedEntity && (
-                <PublicProfileModal entity={selectedEntity} onClose={() => setShowProfileModal(false)} />
+            {/* Bottom Controls */}
+            <div className="absolute bottom-24 right-4 flex flex-col gap-3 z-[400]">
+                <button
+                    onClick={handleRecenter}
+                    className="w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+                </button>
+                <button
+                    onClick={() => setShowStatusModal(true)}
+                    className="w-12 h-12 bg-blue-600 rounded-full shadow-lg shadow-blue-200 flex items-center justify-center text-white hover:bg-blue-700 transition-colors"
+                >
+                    <span className="text-xl">💬</span>
+                </button>
+            </div>
+
+            {/* Modals */}
+            {selectedEntity && showProfileModal && (
+                <PublicProfileModal
+                    entity={selectedEntity}
+                    onClose={() => {
+                        setShowProfileModal(false);
+                        setSelectedEntity(null);
+                    }}
+                />
             )}
 
-            <StatusModal
-                isOpen={showStatusModal}
-                onClose={() => setShowStatusModal(false)}
-                onSave={handleStatusSave}
-            />
+            {showStatusModal && (
+                <StatusModal
+                    isOpen={showStatusModal}
+                    onClose={() => setShowStatusModal(false)}
+                    onSave={handleSaveStatus}
+                />
+            )}
         </div>
     );
 };
-

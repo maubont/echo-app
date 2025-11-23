@@ -109,8 +109,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 }
             });
             if (error) throw error;
-            if (data.session) {
-                setSession(mapSessionToAuthSession(data.session));
+
+            if (data.user) {
+                // Create profile in public.profiles table
+                const { error: profileError } = await supabase.from('profiles').insert({
+                    id: data.user.id,
+                    name,
+                    role,
+                    email,
+                    current_mode: 'networking',
+                    bio: '¡Hola! Soy nuevo aquí.',
+                    avatar_url: `https://ui-avatars.com/api/?name=${name}`
+                });
+
+                if (profileError) {
+                    console.error('Error creating profile:', profileError);
+                    // Continue anyway as auth user is created
+                }
+
+                if (data.session) {
+                    setSession(mapSessionToAuthSession(data.session));
+                }
             }
         },
 

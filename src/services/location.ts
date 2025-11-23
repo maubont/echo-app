@@ -87,21 +87,36 @@ class LocationService {
      * Start broadcasting own location
      */
     async startBroadcasting(
+        userId: string,
         getCurrentLocation: () => Promise<GeolocationPosition>,
         intervalMs: number = 10000
     ): Promise<() => void> {
+        let errorCount = 0;
+        const MAX_ERRORS = 3;
+
         const updateLocation = async () => {
             try {
                 const position = await getCurrentLocation();
+
                 await this.updateOwnLocation({
-                    userId: (await supabase.auth.getUser()).data.user?.id || '',
+                    userId: userId,
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude,
                     accuracy: position.coords.accuracy,
                     isVisible: true,
                 });
-            } catch (error) {
-                console.error('Error updating location:', error);
+
+                // Reset error count on success
+                errorCount = 0;
+            } catch (error: any) {
+                errorCount++;
+                console.error(`Location update failed (${errorCount}/${MAX_ERRORS}):`, error.message);
+
+                // Stop broadcasting after too many consecutive errors
+                if (errorCount >= MAX_ERRORS) {
+                    console.warn('Too many location errors. Stopping broadcast.');
+                    this.stopBroadcasting();
+                }
             }
         };
 

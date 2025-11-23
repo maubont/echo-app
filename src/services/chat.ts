@@ -46,32 +46,18 @@ class ChatService {
             }
         }
 
-        // Create new conversation
-        const { data: conversation, error: convError } = await supabase
-            .from('conversations')
-            .insert({})
-            .select()
-            .single();
+        // Create new conversation using RPC (Atomic operation to avoid RLS race conditions)
+        const { data: conversationId, error: rpcError } = await supabase
+            .rpc('create_new_conversation', {
+                participant_ids: participantIds
+            });
 
-        if (convError || !conversation) {
+        if (rpcError) {
+            console.error('Error creating conversation via RPC:', rpcError);
             throw new Error('Failed to create conversation');
         }
 
-        // Add participants
-        const participants = participantIds.map((userId) => ({
-            conversation_id: conversation.id,
-            user_id: userId,
-        }));
-
-        const { error: participantsError } = await supabase
-            .from('conversation_participants')
-            .insert(participants);
-
-        if (participantsError) {
-            throw new Error('Failed to add participants');
-        }
-
-        return conversation.id;
+        return conversationId;
     }
 
     /**
@@ -206,6 +192,95 @@ class ChatService {
             createdAt: item.conversations.created_at,
             updatedAt: item.conversations.updated_at,
         }));
+    }
+
+    /**
+     * Get user's conversations with enriched data (profiles, last message)
+     */
+    async getChatList(): Promise<any[]> {
+        const user = await supabase.auth.getUser();
+        if (!user.data.user) return [];
+
+        // 1. Get conversations I'm part of
+        const { data: myConvs, error } = await supabase
+            .from('conversation_participants')
+            .select('conversation_id, conversations(*)')
+            .eq('user_id', user.data.user.id);
+
+        if (error || !myConvs) {
+            console.error('Error fetching chat list:', error);
+            return [];
+        }
+
+        const enrichedConversations = await Promise.all(myConvs.map(async (conv: any) => {
+            const conversationId = conv.conversation_id;
+
+            // 2. Get the OTHER participant
+            const { data: participants } = await supabase
+                .from('conversation_participants')
+                .select('user_id, profiles(name, avatar_url)')
+                .eq('conversation_id', conversationId)
+                .neq('user_id', user.data.user.id)
+                .single();
+
+            // 3. Get last message
+            const { data: lastMsg } = await supabase
+                .from('messages')
+                .select('content, created_at, sender_id')
+                .eq('conversation_id', conversationId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            // If no other participant found (shouldn't happen in 1:1), use placeholder
+            const otherUser = participants || {
+                user_id: 'unknown',
+                profiles: { name: 'Usuario', avatar_url: null }
+            };
+
+            return {
+                id: conversationId,
+                participantId: otherUser.user_id,
+                participantName: otherUser.profiles?.name || 'Usuario',
+                participantAvatar: otherUser.profiles?.avatar_url,
+                lastMessage: lastMsg?.content || '',
+                lastTimestamp: lastMsg ? new Date(lastMsg.created_at).getTime() : new Date(conv.conversations.created_at).getTime(),
+                unreadCount: 0, // TODO: Implement unread count
+                messages: [] // Not needed for list view
+            };
+        }));
+
+        // Sort by last activity
+        return enrichedConversations.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+    }
+
+    /**
+     * Subscribe to ALL conversations for the current user
+     * Used for the chat list to update last message and unread count
+     */
+    subscribeToAllConversations(
+        userId: string,
+        callback: (payload: any) => void
+    ): () => void {
+        const channel = supabase
+            .channel(`user_chats_${userId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'messages',
+                },
+                (payload) => {
+                    // The RLS policy ensures we only receive messages for conversations we are part of
+                    callback(payload.new);
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }
 }
 

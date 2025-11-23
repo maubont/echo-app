@@ -14,28 +14,28 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['icon.svg'],
         manifest: {
           name: 'Proxi App',
           short_name: 'Proxi',
-          description: 'Conecta con personas y lugares cercanos',
-          theme_color: '#ffffff',
-          background_color: '#ffffff',
-          display: 'standalone',
+          theme_color: '#2563eb',
           icons: [
             {
-              src: 'icon.svg',
+              src: '/pwa-192x192.png',
+              sizes: '192x192',
+              type: 'image/png'
+            },
+            {
+              src: '/pwa-512x512.png',
               sizes: '512x512',
-              type: 'image/svg+xml',
-              purpose: 'any maskable'
+              type: 'image/png'
             }
           ]
         }
       })
     ],
     define: {
-      'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify('https://huibsilkctqfahissvax.supabase.co'),
+      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify('sb_publishable_9T-9drIg43mkeR6HvK_2Wg_9OUzZuvX')
     },
     resolve: {
       alias: {
