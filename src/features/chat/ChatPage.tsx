@@ -1,0 +1,271 @@
+import { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, MessageCircle, MoreVertical, Phone, Send, Smile } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { Button } from '../../components/ui/Button';
+import { ChatConversation } from '../../lib/types';
+
+export const ChatPage = () => {
+    const { session } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const stateParams = location.state as { userId?: string, userName?: string, userAvatar?: string } | null;
+
+    const [activeChatId, setActiveChatId] = useState<string | null>(null);
+    const [conversations, setConversations] = useState<ChatConversation[]>([]);
+    const [inputText, setInputText] = useState('');
+    const [isTyping, setIsTyping] = useState(false);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Auto scroll to bottom when new messages arrive
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [conversations, activeChatId]);
+
+    // Initial mock data or load from "backend"
+    useEffect(() => {
+        const mockChats: ChatConversation[] = [
+            {
+                id: 'c1',
+                participantId: 'u2',
+                participantName: 'Ana Ingeniera',
+                lastMessage: '¡Hola! Vi que estás en el evento.',
+                lastTimestamp: Date.now() - 1000 * 60 * 5,
+                unreadCount: 1,
+                messages: [
+                    { id: 'm1', senderId: 'u2', text: '¡Hola! Vi que estás en el evento.', timestamp: Date.now() - 1000 * 60 * 5 }
+                ]
+            },
+            {
+                id: 'c2',
+                participantId: 'u3',
+                participantName: 'Stand TechCorp',
+                participantAvatar: 'https://ui-avatars.com/api/?name=TC&background=random',
+                lastMessage: 'Tenemos descuentos hoy.',
+                lastTimestamp: Date.now() - 1000 * 60 * 60 * 2,
+                unreadCount: 0,
+                messages: [
+                    { id: 'm1', senderId: 'u3', text: 'Gracias por visitar nuestro stand.', timestamp: Date.now() - 1000 * 60 * 60 * 2 },
+                    { id: 'm2', senderId: 'u3', text: 'Tenemos descuentos hoy.', timestamp: Date.now() - 1000 * 60 * 60 * 2 }
+                ]
+            }
+        ];
+        setConversations(mockChats);
+
+        // If navigating from map with target user, open or create chat
+        if (stateParams?.userId) {
+            const existing = mockChats.find(c => c.participantId === stateParams.userId);
+            if (existing) {
+                setActiveChatId(existing.id);
+            } else {
+                // Create temp new chat
+                const newChat: ChatConversation = {
+                    id: `c-${Date.now()}`,
+                    participantId: stateParams.userId,
+                    participantName: stateParams.userName || 'Usuario',
+                    participantAvatar: stateParams.userAvatar,
+                    lastMessage: '',
+                    lastTimestamp: Date.now(),
+                    unreadCount: 0,
+                    messages: []
+                };
+                setConversations([newChat, ...mockChats]);
+                setActiveChatId(newChat.id);
+            }
+        }
+    }, [stateParams]);
+
+    const handleSend = () => {
+        if (!inputText.trim() || !activeChatId || !session) return;
+
+        setConversations(prev => prev.map(chat => {
+            if (chat.id === activeChatId) {
+                return {
+                    ...chat,
+                    messages: [...chat.messages, {
+                        id: `m-${Date.now()}`,
+                        senderId: session.user.id,
+                        text: inputText,
+                        timestamp: Date.now()
+                    }],
+                    lastMessage: inputText,
+                    lastTimestamp: Date.now()
+                };
+            }
+            return chat;
+        }));
+        setInputText('');
+
+        // Simulate typing indicator before reply
+        setTimeout(() => {
+            setIsTyping(true);
+        }, 500);
+
+        setTimeout(() => {
+            setIsTyping(false);
+            setConversations(prev => prev.map(chat => {
+                if (chat.id === activeChatId) {
+                    return {
+                        ...chat,
+                        messages: [...chat.messages, {
+                            id: `m-rep-${Date.now()}`,
+                            senderId: chat.participantId,
+                            text: '¡Qué interesante! Cuéntame más.',
+                            timestamp: Date.now()
+                        }],
+                        lastMessage: '¡Qué interesante! Cuéntame más.',
+                        lastTimestamp: Date.now()
+                    };
+                }
+                return chat;
+            }));
+        }, 2500);
+    };
+
+    const activeChat = conversations.find(c => c.id === activeChatId);
+
+    // View: Chat List
+    if (!activeChatId) {
+        return (
+            <div className="h-screen bg-white pb-[90px] flex flex-col">
+                <div className="p-6 pb-2">
+                    <h1 className="text-2xl font-bold text-slate-900">Mensajes</h1>
+                </div>
+                <div className="flex-1 overflow-y-auto px-4">
+                    {conversations.length === 0 ? (
+                        <div className="text-center mt-20 text-slate-400">
+                            <MessageCircle size={48} className="mx-auto mb-4 opacity-50" />
+                            <p>No tienes mensajes aún.</p>
+                            <Button variant="ghost" label="Ir al mapa" onClick={() => navigate('/map')} className="mt-4" />
+                        </div>
+                    ) : (
+                        conversations.map(chat => (
+                            <div
+                                key={chat.id}
+                                onClick={() => setActiveChatId(chat.id)}
+                                className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer border-b border-slate-50 last:border-0"
+                            >
+                                <div className="relative">
+                                    <img
+                                        src={chat.participantAvatar || `https://ui-avatars.com/api/?name=${chat.participantName}&background=random`}
+                                        className="w-12 h-12 rounded-full object-cover border border-slate-100"
+                                    />
+                                    {chat.unreadCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full ring-2 ring-white">
+                                            {chat.unreadCount}
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex justify-between items-baseline mb-0.5">
+                                        <h3 className="font-bold text-slate-900 truncate">{chat.participantName}</h3>
+                                        <span className="text-[10px] text-slate-400">
+                                            {new Date(chat.lastTimestamp).getHours()}:{new Date(chat.lastTimestamp).getMinutes().toString().padStart(2, '0')}
+                                        </span>
+                                    </div>
+                                    <p className={`text-sm truncate ${chat.unreadCount > 0 ? 'text-slate-800 font-semibold' : 'text-slate-500'}`}>
+                                        {chat.lastMessage || 'Inicia la conversación'}
+                                    </p>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // View: Conversation Detail
+    return (
+        <div className="h-screen bg-white flex flex-col z-50 relative">
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3 bg-white/90 backdrop-blur shadow-sm">
+                <button onClick={() => setActiveChatId(null)} className="p-2 -ml-2 hover:bg-slate-100 rounded-full">
+                    <ArrowLeft size={20} className="text-slate-600" />
+                </button>
+                <div className="relative">
+                    <img
+                        src={activeChat?.participantAvatar || `https://ui-avatars.com/api/?name=${activeChat?.participantName}`}
+                        className="w-10 h-10 rounded-full object-cover"
+                    />
+                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full ring-2 ring-white"></span>
+                </div>
+                <div className="flex-1">
+                    <h3 className="font-bold text-slate-900 text-sm">{activeChat?.participantName}</h3>
+                    <p className="text-xs text-slate-500">En línea</p>
+                </div>
+                <button className="p-2 text-slate-400 hover:bg-slate-50 rounded-full">
+                    <Phone size={20} />
+                </button>
+                <button className="p-2 text-slate-400 hover:bg-slate-50 rounded-full">
+                    <MoreVertical size={20} />
+                </button>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 pb-32">
+                {activeChat?.messages.length === 0 && (
+                    <div className="text-center py-10 text-slate-400 text-sm">
+                        Envía un mensaje para comenzar a charlar.
+                    </div>
+                )}
+                {activeChat?.messages.map(msg => {
+                    const isMe = msg.senderId === session?.user.id;
+                    return (
+                        <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm shadow-sm ${isMe
+                                ? 'bg-blue-600 text-white rounded-tr-sm'
+                                : 'bg-white text-slate-700 border border-slate-100 rounded-tl-sm'
+                                }`}>
+                                {msg.text}
+                                <div className={`text-[10px] mt-1 text-right opacity-70 ${isMe ? 'text-blue-100' : 'text-slate-400'}`}>
+                                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+
+                {/* Typing Indicator */}
+                {isTyping && (
+                    <div className="flex justify-start">
+                        <div className="bg-white border border-slate-100 px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm">
+                            <div className="flex gap-1">
+                                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Scroll anchor */}
+                <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input */}
+            <div className="fixed bottom-20 left-0 right-0 p-3 bg-white border-t border-slate-100 z-50">
+                <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-full border border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                    <input
+                        className="flex-1 bg-transparent px-4 py-2 text-sm outline-none placeholder:text-slate-400"
+                        placeholder="Escribe un mensaje..."
+                        value={inputText}
+                        onChange={e => setInputText(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSend()}
+                    />
+                    <button
+                        onClick={handleSend}
+                        disabled={!inputText.trim()}
+                        className="bg-blue-600 text-white p-2.5 rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                    >
+                        <Send size={18} />
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
