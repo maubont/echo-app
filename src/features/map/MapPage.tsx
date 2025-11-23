@@ -297,11 +297,17 @@ export const MapPage = () => {
 
     // Update Map Markers & View
     const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
+    const hasCenteredRef = useRef(false);
 
     useEffect(() => {
         if (!mapRef.current || !markersGroupRef.current) return;
         const map = mapRef.current;
         const clusterGroup = markersGroupRef.current;
+
+        if (coords && !hasCenteredRef.current) {
+            map.setView([coords.lat, coords.lng], 16);
+            hasCenteredRef.current = true;
+        }
 
         // 1. Handle User's Own Indicator (Blue Dot)
         // Clear previous user indicators

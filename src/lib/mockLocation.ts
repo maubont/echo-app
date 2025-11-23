@@ -12,7 +12,7 @@ export interface MockLocationConfig {
 
 // Default location: Bogotá, Colombia
 const DEFAULT_CONFIG: MockLocationConfig = {
-    enabled: true, // Set to true to use mock locations
+    enabled: false, // Set to true to use mock locations
     defaultLocation: {
         lat: 4.7110,
         lng: -74.0721

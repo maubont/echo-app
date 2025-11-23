@@ -119,11 +119,14 @@ export const ChatPage = () => {
         };
     }, [session, activeChatId]);
 
+    const [error, setError] = useState<string | null>(null);
+
     const handleSend = async () => {
         if (!inputText.trim() || !activeChatId || !session) return;
 
         const messageText = inputText;
         setInputText('');
+        setError(null);
 
         try {
             // Send message to Supabase
@@ -146,8 +149,11 @@ export const ChatPage = () => {
                 }
                 return chat;
             }));
-        } catch (error) {
-            console.error('Error sending message:', error);
+        } catch (err: any) {
+            console.error('Error sending message:', err);
+            setError(`Error al enviar: ${err.message || 'Error desconocido'}`);
+            // Restore text if failed
+            setInputText(messageText);
         }
     };
 
@@ -295,6 +301,13 @@ export const ChatPage = () => {
                 {/* Scroll anchor */}
                 <div ref={messagesEndRef} />
             </div>
+
+            {/* Error Message */}
+            {error && (
+                <div className="fixed bottom-36 left-4 right-4 bg-red-100 text-red-700 px-4 py-2 rounded-lg text-sm text-center shadow-sm z-50">
+                    {error}
+                </div>
+            )}
 
             {/* Input */}
             <div className="fixed bottom-24 left-0 right-0 p-3 bg-white border-t border-slate-100 z-50 max-w-md mx-auto">
