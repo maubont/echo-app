@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { ChatConversation } from '../../lib/types';
+import { chatService } from '../../services/chat';
 
 export const ChatPage = () => {
     const { session } = useAuth();
@@ -26,104 +27,77 @@ export const ChatPage = () => {
         scrollToBottom();
     }, [conversations, activeChatId]);
 
-    // Initial mock data or load from "backend"
+    // Load conversations from Supabase
     useEffect(() => {
-        const mockChats: ChatConversation[] = [
-            {
-                id: 'c1',
-                participantId: 'u2',
-                participantName: 'Ana Ingeniera',
-                lastMessage: '¡Hola! Vi que estás en el evento.',
-                lastTimestamp: Date.now() - 1000 * 60 * 5,
-                unreadCount: 1,
-                messages: [
-                    { id: 'm1', senderId: 'u2', text: '¡Hola! Vi que estás en el evento.', timestamp: Date.now() - 1000 * 60 * 5 }
-                ]
-            },
-            {
-                id: 'c2',
-                participantId: 'u3',
-                participantName: 'Stand TechCorp',
-                participantAvatar: 'https://ui-avatars.com/api/?name=TC&background=random',
-                lastMessage: 'Tenemos descuentos hoy.',
-                lastTimestamp: Date.now() - 1000 * 60 * 60 * 2,
-                unreadCount: 0,
-                messages: [
-                    { id: 'm1', senderId: 'u3', text: 'Gracias por visitar nuestro stand.', timestamp: Date.now() - 1000 * 60 * 60 * 2 },
-                    { id: 'm2', senderId: 'u3', text: 'Tenemos descuentos hoy.', timestamp: Date.now() - 1000 * 60 * 60 * 2 }
-                ]
-            }
-        ];
-        setConversations(mockChats);
+        const loadConversations = async () => {
+            if (!session) return;
 
-        // If navigating from map with target user, open or create chat
-        if (stateParams?.userId) {
-            const existing = mockChats.find(c => c.participantId === stateParams.userId);
-            if (existing) {
-                setActiveChatId(existing.id);
-            } else {
-                // Create temp new chat
-                const newChat: ChatConversation = {
-                    id: `c-${Date.now()}`,
-                    participantId: stateParams.userId,
-                    participantName: stateParams.userName || 'Usuario',
-                    participantAvatar: stateParams.userAvatar,
-                    lastMessage: '',
-                    lastTimestamp: Date.now(),
-                    unreadCount: 0,
-                    messages: []
-                };
-                setConversations([newChat, ...mockChats]);
-                setActiveChatId(newChat.id);
-            }
-        }
-    }, [stateParams]);
+            // If navigating from map with target user, create/open conversation
+            if (stateParams?.userId) {
+                try {
+                    const conversationId = await chatService.getOrCreateConversation([
+                        session.user.id,
+                        stateParams.userId
+                    ]);
+                    setActiveChatId(conversationId);
 
-    const handleSend = () => {
+                    // Load initial messages
+                    const messages = await chatService.fetchMessages(conversationId);
+                    const tempConv: ChatConversation = {
+                        id: conversationId,
+                        participantId: stateParams.userId,
+                        participantName: stateParams.userName || 'Usuario',
+                        participantAvatar: stateParams.userAvatar,
+                        lastMessage: messages[messages.length - 1]?.content || '',
+                        lastTimestamp: messages[messages.length - 1] ? new Date(messages[messages.length - 1].createdAt).getTime() : Date.now(),
+                        unreadCount: 0,
+                        messages: messages.map(m => ({
+                            id: m.id,
+                            senderId: m.senderId,
+                            text: m.content,
+                            timestamp: new Date(m.createdAt).getTime()
+                        }))
+                    };
+                    setConversations([tempConv]);
+                } catch (error) {
+                    console.error('Error creating conversation:', error);
+                }
+            }
+        };
+
+        loadConversations();
+    }, [stateParams, session]);
+
+    const handleSend = async () => {
         if (!inputText.trim() || !activeChatId || !session) return;
 
-        setConversations(prev => prev.map(chat => {
-            if (chat.id === activeChatId) {
-                return {
-                    ...chat,
-                    messages: [...chat.messages, {
-                        id: `m-${Date.now()}`,
-                        senderId: session.user.id,
-                        text: inputText,
-                        timestamp: Date.now()
-                    }],
-                    lastMessage: inputText,
-                    lastTimestamp: Date.now()
-                };
-            }
-            return chat;
-        }));
+        const messageText = inputText;
         setInputText('');
 
-        // Simulate typing indicator before reply
-        setTimeout(() => {
-            setIsTyping(true);
-        }, 500);
+        try {
+            // Send message to Supabase
+            await chatService.sendMessage(activeChatId, messageText);
 
-        setTimeout(() => {
-            setIsTyping(false);
+            // Optimistically update UI
             setConversations(prev => prev.map(chat => {
                 if (chat.id === activeChatId) {
                     return {
                         ...chat,
                         messages: [...chat.messages, {
-                            id: `m-rep-${Date.now()}`,
-                            senderId: chat.participantId,
-                            text: '¡Qué interesante! Cuéntame más.',
+                            id: `temp-${Date.now()}`,
+                            senderId: session.user.id,
+                            text: messageText,
                             timestamp: Date.now()
                         }],
-                        lastMessage: '¡Qué interesante! Cuéntame más.',
+                        lastMessage: messageText,
                         lastTimestamp: Date.now()
                     };
                 }
                 return chat;
             }));
-        }, 2500);
+        } catch (error) {
+            console.error('Error sending message:', error);
+        }
     };
 
     const activeChat = conversations.find(c => c.id === activeChatId);
