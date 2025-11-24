@@ -236,48 +236,59 @@ export const ChatPage = () => {
 
     // View: Conversation Detail
     return (
-        <div className="h-screen bg-white flex flex-col z-50 relative">
+        <div className="fixed top-0 bottom-0 w-full max-w-md left-0 right-0 mx-auto z-50 bg-white flex flex-col shadow-2xl overflow-hidden">
             {/* Header */}
-            <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-3 bg-white/90 backdrop-blur shadow-sm">
-                <button onClick={() => setActiveChatId(null)} className="p-2 -ml-2 hover:bg-slate-100 rounded-full">
-                    <ArrowLeft size={20} className="text-slate-600" />
+            <div className="flex-none h-16 px-4 border-b border-slate-100 flex items-center gap-3 bg-white shadow-sm z-50">
+                <button onClick={() => setActiveChatId(null)} className="p-2 -ml-2 hover:bg-slate-50 rounded-full transition-colors">
+                    <ArrowLeft size={20} className="text-slate-700" />
                 </button>
                 <div className="relative">
                     <img
                         src={activeChat?.participantAvatar || `https://ui-avatars.com/api/?name=${activeChat?.participantName}`}
-                        className="w-10 h-10 rounded-full object-cover"
+                        className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
                     />
-                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full ring-2 ring-white"></span>
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full ring-2 ring-white"></span>
                 </div>
                 <div className="flex-1">
                     <h3 className="font-bold text-slate-900 text-sm">{activeChat?.participantName}</h3>
-                    <p className="text-xs text-slate-500">En línea</p>
+                    <p className="text-xs text-slate-500 font-medium flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> En línea
+                    </p>
                 </div>
-                <button className="p-2 text-slate-400 hover:bg-slate-50 rounded-full">
+                <button className="p-2 text-slate-500 hover:bg-slate-50 rounded-full transition-colors">
                     <Phone size={20} />
                 </button>
-                <button className="p-2 text-slate-400 hover:bg-slate-50 rounded-full">
+                <button className="p-2 text-slate-500 hover:bg-slate-50 rounded-full transition-colors">
                     <MoreVertical size={20} />
                 </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 pb-32">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 pb-32">
+                {/* Subtle Chat Pattern */}
+                <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")` }}></div>
+
                 {activeChat?.messages.length === 0 && (
-                    <div className="text-center py-10 text-slate-400 text-sm">
-                        Envía un mensaje para comenzar a charlar.
+                    <div className="flex flex-col items-center justify-center h-full text-center p-8 animate-in fade-in zoom-in duration-500">
+                        <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                            <MessageCircle size={40} className="text-blue-500 opacity-80" />
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-800 mb-2">Comienza la charla</h3>
+                        <p className="text-slate-500 text-sm max-w-[200px] leading-relaxed">
+                            Envía un mensaje para romper el hielo con <span className="font-bold text-blue-600">{activeChat.participantName}</span>.
+                        </p>
                     </div>
                 )}
                 {activeChat?.messages.map(msg => {
                     const isMe = msg.senderId === session?.user.id;
                     return (
-                        <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm shadow-sm ${isMe
-                                ? 'bg-blue-600 text-white rounded-tr-sm'
-                                : 'bg-white text-slate-700 border border-slate-100 rounded-tl-sm'
+                        <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in-up`}>
+                            <div className={`max-w-[75%] px-5 py-3 text-sm shadow-sm ${isMe
+                                ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white rounded-2xl rounded-tr-sm shadow-blue-500/20'
+                                : 'bg-white text-slate-700 border border-slate-100 rounded-2xl rounded-tl-sm shadow-sm'
                                 }`}>
                                 {msg.text}
-                                <div className={`text-[10px] mt-1 text-right opacity-70 ${isMe ? 'text-blue-100' : 'text-slate-400'}`}>
+                                <div className={`text-[10px] mt-1 text-right opacity-70 font-medium ${isMe ? 'text-blue-100' : 'text-slate-400'}`}>
                                     {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>
                             </div>
@@ -310,19 +321,21 @@ export const ChatPage = () => {
             )}
 
             {/* Input */}
-            <div className="fixed bottom-24 left-0 right-0 p-3 bg-white border-t border-slate-100 z-50 max-w-md mx-auto">
-                <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-full border border-slate-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
-                    <input
-                        className="flex-1 bg-transparent px-4 py-2 text-sm outline-none placeholder:text-slate-400"
-                        placeholder="Escribe un mensaje..."
-                        value={inputText}
-                        onChange={e => setInputText(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && handleSend()}
-                    />
+            <div className="fixed bottom-24 left-0 right-0 p-4 bg-gradient-to-t from-white/0 via-white/50 to-transparent z-[60] pointer-events-none">
+                <div className="max-w-md mx-auto glass rounded-full p-1.5 flex items-center gap-2 shadow-xl shadow-blue-900/5 border border-white/50 pointer-events-auto">
+                    <div className="pl-4 flex-1">
+                        <input
+                            className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400 font-medium"
+                            placeholder="Escribe un mensaje..."
+                            value={inputText}
+                            onChange={e => setInputText(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSend()}
+                        />
+                    </div>
                     <button
                         onClick={handleSend}
                         disabled={!inputText.trim()}
-                        className="bg-blue-600 text-white p-2.5 rounded-full hover:bg-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                        className="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/30 hover:scale-105 active:scale-95 flex-shrink-0"
                     >
                         <Send size={18} />
                     </button>

@@ -53,29 +53,39 @@ export const BottomNav = () => {
     ];
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 pb-safe pt-2 px-6 flex justify-between items-center z-50 h-[80px]">
-            {items.map((item) => {
-                const isActive = currentPath.startsWith(item.path);
-                return (
-                    <button
-                        key={item.id}
-                        onClick={() => navigate(item.path)}
-                        className={`flex flex-col items-center gap-1 transition-colors relative ${isActive ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
-                            }`}
-                    >
-                        <div className="relative">
-                            {React.cloneElement(item.icon as React.ReactElement<any>, {
-                                strokeWidth: isActive ? 2.5 : 2
-                            })}
-                            {/* Badge for unread messages */}
-                            {item.badge && (
-                                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+        <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
+            <div className="bg-white/90 backdrop-blur-xl border border-white/40 shadow-2xl shadow-blue-900/10 rounded-full px-6 py-3 flex items-center gap-8 pointer-events-auto">
+                {items.map((item) => {
+                    const isActive = currentPath.startsWith(item.path);
+                    return (
+                        <button
+                            key={item.id}
+                            onClick={() => navigate(item.path)}
+                            className={`relative flex flex-col items-center justify-center w-10 h-10 transition-all duration-300 ${isActive ? 'text-blue-600 -translate-y-1' : 'text-slate-400 hover:text-slate-600 hover:-translate-y-0.5'
+                                }`}
+                        >
+                            <div className={`absolute inset-0 bg-blue-500/10 rounded-full scale-0 transition-transform duration-300 ${isActive ? 'scale-150' : ''}`} />
+
+                            <div className="relative z-10">
+                                {React.cloneElement(item.icon as React.ReactElement<any>, {
+                                    size: 24,
+                                    strokeWidth: isActive ? 2.5 : 2,
+                                    className: `transition-all duration-300 ${isActive ? 'drop-shadow-sm' : ''}`
+                                })}
+
+                                {/* Badge for unread messages */}
+                                {item.badge && (
+                                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                                )}
+                            </div>
+
+                            {isActive && (
+                                <span className="absolute -bottom-2 w-1 h-1 bg-blue-600 rounded-full animate-in fade-in zoom-in duration-300"></span>
                             )}
-                        </div>
-                        <span className="text-[10px] font-medium">{item.label}</span>
-                    </button>
-                );
-            })}
+                        </button>
+                    );
+                })}
+            </div>
         </div>
     );
 };

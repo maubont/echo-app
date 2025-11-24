@@ -40,46 +40,42 @@ const PublicProfileModal = ({ entity, onClose }: { entity: MapEntity, onClose: (
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in">
-            <div className="bg-white w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl animate-in slide-in-from-bottom-10">
-                <div className="h-24 bg-gradient-to-r from-blue-500 to-purple-600 relative">
-                    <button onClick={onClose} className="absolute top-4 right-4 bg-black/20 hover:bg-black/30 text-white p-1.5 rounded-full transition-colors">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white/90 backdrop-blur-xl w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-10 duration-300 border border-white/20">
+                <div className="h-32 bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 relative">
+                    <button onClick={onClose} className="absolute top-4 right-4 bg-black/20 hover:bg-black/30 text-white p-2 rounded-full transition-all hover:scale-105 backdrop-blur-sm">
                         <X size={20} />
                     </button>
                 </div>
-                <div className="px-6 pb-6 -mt-12">
-                    <div className="w-24 h-24 bg-white rounded-full p-1 shadow-lg mb-3">
+                <div className="px-6 pb-8 -mt-16 relative">
+                    <div className="w-32 h-32 bg-white p-1.5 rounded-full shadow-xl mb-4 mx-auto relative group">
                         <img
                             src={entity.avatarUrl || `https://ui-avatars.com/api/?name=${entity.name}&background=random`}
-                            className="w-full h-full rounded-full object-cover"
+                            className="w-full h-full rounded-full object-cover border border-slate-100"
                         />
-                    </div>
-                    <div className="flex justify-between items-start mb-1">
-                        <div>
-                            <h2 className="text-xl font-bold text-slate-900">{entity.name}</h2>
-                            <p className="text-slate-500 text-sm flex items-center gap-1">
-                                <span className={`w-2 h-2 rounded-full ${entity.type === 'business' ? 'bg-purple-500' : 'bg-green-500'}`} />
-                                {entity.type === 'business' ? 'Negocio Local' : 'Persona'}
-                            </p>
-                        </div>
-                        <div className="bg-slate-100 px-2 py-1 rounded text-xs font-bold uppercase text-slate-500">
-                            {entity.mode}
-                        </div>
+                        <div className={`absolute bottom-2 right-2 w-6 h-6 rounded-full border-4 border-white ${entity.type === 'business' ? 'bg-purple-500' : 'bg-green-500'}`} />
                     </div>
 
-                    <div className="flex flex-wrap gap-2 mb-4">
+                    <div className="text-center mb-6">
+                        <h2 className="text-2xl font-bold text-slate-900 mb-1">{entity.name}</h2>
+                        <p className="text-slate-500 font-medium flex items-center justify-center gap-2">
+                            {entity.type === 'business' ? 'Negocio Local' : 'Persona'} • <span className="uppercase text-xs font-bold tracking-wider bg-slate-100 px-2 py-0.5 rounded-full">{entity.mode}</span>
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap justify-center gap-2 mb-6">
                         {entity.categories.map(cat => (
-                            <span key={cat} className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md text-xs font-bold">
+                            <span key={cat} className="bg-blue-50/80 backdrop-blur-sm text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-100">
                                 {cat}
                             </span>
                         ))}
                     </div>
 
-                    <p className="text-sm text-slate-600 bg-slate-50 p-3 rounded-xl mb-6 border border-slate-100">
+                    <p className="text-sm text-slate-600 bg-slate-50/80 p-4 rounded-2xl mb-8 border border-slate-100 leading-relaxed text-center">
                         "{entity.description}"
                     </p>
 
-                    <Button fullWidth label="Enviar Mensaje" icon={<MessageCircle size={18} />} onClick={handleConnect} />
+                    <Button fullWidth label="Enviar Mensaje" icon={<MessageCircle size={20} />} onClick={handleConnect} className="shadow-xl shadow-blue-500/20" />
                 </div>
             </div>
         </div>
@@ -468,13 +464,13 @@ export const MapPage = () => {
             <div ref={containerRef} className="flex-1 z-0" />
 
             {/* Top Bar */}
-            <div className="absolute top-4 left-4 right-4 z-[400] flex gap-2">
-                <div className="flex-1 bg-white rounded-xl shadow-lg flex items-center p-2 border border-slate-100">
+            <div className="absolute top-4 left-4 right-4 z-[400] flex gap-3 max-w-md mx-auto">
+                <div className="flex-1 glass rounded-2xl flex items-center p-1.5 transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500/50">
                     <form onSubmit={handleSearch} className="flex-1 flex items-center">
                         <input
                             type="text"
                             placeholder="Buscar lugares..."
-                            className="w-full bg-transparent outline-none text-slate-700 placeholder-slate-400 px-2"
+                            className="w-full bg-transparent outline-none text-slate-700 placeholder-slate-400 px-3 py-2 text-sm font-medium"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -482,7 +478,7 @@ export const MapPage = () => {
                 </div>
                 <button
                     onClick={() => setShowFilters(!showFilters)}
-                    className={`w-12 h-12 rounded-xl shadow-lg flex items-center justify-center transition-colors ${showFilters ? 'bg-blue-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-50'}`}
+                    className={`w-12 h-12 rounded-2xl glass flex items-center justify-center transition-all active:scale-95 ${showFilters ? 'bg-blue-600 text-white border-transparent' : 'text-slate-600 hover:bg-white'}`}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
                 </button>
@@ -490,9 +486,12 @@ export const MapPage = () => {
 
             {/* Filters Panel */}
             {showFilters && (
-                <div className="absolute top-20 left-4 right-4 z-[400] bg-white rounded-2xl shadow-xl p-4 animate-in slide-in-from-top-2 border border-slate-100">
-                    <div className="mb-4">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">Distancia Máxima</h3>
+                <div className="absolute top-20 left-4 right-4 z-[400] glass rounded-[24px] p-5 animate-in slide-in-from-top-4 duration-300 max-w-md mx-auto">
+                    <div className="mb-6">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Distancia Máxima</h3>
+                            <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">{maxDistance / 1000} km</span>
+                        </div>
                         <input
                             type="range"
                             min="1000"
@@ -500,25 +499,24 @@ export const MapPage = () => {
                             step="1000"
                             value={maxDistance}
                             onChange={(e) => setMaxDistance(parseInt(e.target.value))}
-                            className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                            className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 hover:accent-blue-500 transition-all"
                         />
-                        <div className="flex justify-between text-xs text-slate-500 mt-1">
+                        <div className="flex justify-between text-[10px] text-slate-400 mt-2 font-medium">
                             <span>1 km</span>
-                            <span className="font-bold text-blue-600">{maxDistance / 1000} km</span>
                             <span>50 km</span>
                         </div>
                     </div>
 
                     <div>
-                        <h3 className="text-xs font-bold text-slate-400 uppercase mb-2">Categorías</h3>
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Categorías</h3>
                         <div className="flex flex-wrap gap-2">
                             {allCategories.map(cat => (
                                 <button
                                     key={cat}
                                     onClick={() => toggleCategory(cat)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${selectedCategories.includes(cat)
-                                        ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
-                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 active:scale-95 ${selectedCategories.includes(cat)
+                                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                                        : 'bg-slate-100/50 text-slate-600 hover:bg-slate-100 border border-transparent hover:border-slate-200'
                                         }`}
                                 >
                                     {cat}
