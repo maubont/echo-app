@@ -238,11 +238,14 @@ class ChatService {
                 profiles: { name: 'Usuario', avatar_url: null }
             };
 
+            const rawProfile = otherUser.profiles;
+            const profile = Array.isArray(rawProfile) ? rawProfile[0] : rawProfile;
+
             return {
                 id: conversationId,
                 participantId: otherUser.user_id,
-                participantName: otherUser.profiles?.name || 'Usuario',
-                participantAvatar: otherUser.profiles?.avatar_url,
+                participantName: profile?.name || 'Usuario',
+                participantAvatar: profile?.avatar_url,
                 lastMessage: lastMsg?.content || '',
                 lastTimestamp: lastMsg ? new Date(lastMsg.created_at).getTime() : new Date(conv.conversations.created_at).getTime(),
                 unreadCount: 0, // TODO: Implement unread count
