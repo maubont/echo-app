@@ -61,38 +61,54 @@ export const HomePage = () => {
             </header>
 
             {/* Visibility Card */}
-            <div className="rounded-3xl p-6 shadow-theme-xl mb-6 overflow-hidden bg-theme-card/80 text-theme-primary flex flex-col gap-4 relative">
+            <div className={`rounded-3xl p-6 shadow-theme-xl mb-6 overflow-hidden flex flex-col gap-4 relative transition-all duration-500 ${isVisible
+                    ? 'bg-gradient-to-br from-primary/20 via-bg-card to-bg-card border-2'
+                    : 'bg-theme-card/50 border'
+                }`}
+                style={isVisible ? { borderColor: 'rgb(var(--primary-500) / 0.5)' } : { borderColor: 'rgb(var(--bg-secondary))' }}
+            >
+                {/* Glow effect when visible */}
                 {isVisible && (
                     <div
-                        className="absolute top-0 right-0 w-32 h-32 opacity-10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"
-                        style={{ background: 'rgb(var(--text-primary))' }}
+                        className="absolute top-0 right-0 w-40 h-40 opacity-20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"
+                        style={{ background: 'rgb(var(--primary-500))' }}
                     ></div>
                 )}
+
                 <div className="flex justify-between items-start relative z-10">
-                    <div className="p-2 rounded-xl backdrop-blur-sm" style={{ background: 'rgba(255,255,255,0.2)' }}>
-                        {isVisible ? <Eye size={24} /> : <EyeOff size={24} />}
+                    <div
+                        className={`p-2 rounded-xl transition-all ${isVisible ? 'bg-primary/20' : 'bg-theme-secondary/30'
+                            }`}
+                    >
+                        {isVisible ? <Eye size={24} className="text-primary-color" /> : <EyeOff size={24} className="text-theme-tertiary" />}
                     </div>
                     <span
-                        className={`text-[10px] font-bold px-2 py-1 rounded backdrop-blur-sm ${isVisible ? '' : 'invisible'}`}
-                        style={{ background: 'rgba(255,255,255,0.2)' }}
+                        className={`text-[10px] font-bold px-2 py-1 rounded transition-all ${isVisible ? 'bg-primary/20 text-primary-color' : 'invisible'
+                            }`}
                     >
-                        ACTIVO
+                        EN LÍNEA
                     </span>
                 </div>
+
                 <div>
-                    <h2 className="text-2xl font-bold mb-1 relative z-10 text-theme-primary">
+                    <h2 className={`text-2xl font-bold mb-1 relative z-10 transition-colors ${isVisible ? 'text-theme-primary' : 'text-theme-secondary'
+                        }`}>
                         {isVisible ? 'Estás Visible' : 'Estás Oculto'}
                     </h2>
-                    <p className={`text-xs relative z-10 leading-relaxed opacity-90 ${isVisible ? '' : 'text-theme-secondary'}`}>
+                    <p className={`text-xs relative z-10 leading-relaxed transition-colors ${isVisible ? 'text-theme-secondary' : 'text-theme-tertiary'
+                        }`}>
                         {isVisible
                             ? 'Tu ubicación aproximada se muestra en el mapa.'
                             : 'Nadie puede ver tu ubicación en el mapa.'}
                     </p>
                 </div>
+
                 <button
                     onClick={handleToggleVisibility}
                     disabled={loading}
-                    className={`w-full py-3 rounded-xl font-bold text-sm transition-all shadow-theme-lg active:scale-[0.98] disabled:opacity-70 ${isVisible ? 'bg-primary text-white hover:bg-primary/90' : 'bg-theme-secondary/30 text-theme-primary hover:bg-theme-secondary/40'
+                    className={`w-full py-3 rounded-xl font-bold text-sm transition-all shadow-theme-lg active:scale-[0.98] disabled:opacity-70 ${isVisible
+                            ? 'bg-primary text-white hover:bg-primary/90'
+                            : 'retro-illuminated text-theme-primary hover:shadow-theme-xl'
                         }`}
                 >
                     {loading ? 'Actualizando...' : isVisible ? 'Ocultarme Ahora' : 'Hacerme Visible'}
