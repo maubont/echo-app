@@ -15,9 +15,9 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
-          name: 'Proxi App',
-          short_name: 'Proxi',
-          theme_color: '#2563eb',
+          name: 'Echo',
+          short_name: 'Echo',
+          theme_color: '#09090b',
           icons: [
             {
               src: '/pwa-192x192.png',
