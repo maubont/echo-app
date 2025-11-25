@@ -1,8 +1,8 @@
 /* ============================================
    PROXI APP - UNIFIED THEME SYSTEM
    ============================================
-   Three themes: Aurora (Day), Nebula (Night), Quantum (Cyberpunk)
-   Contextual assignment: Aurora (Home/Profile), Nebula (Chat), Quantum (Map)
+   Three themes: Aurora (Day), Nebula (Night)
+   Contextual assignment: Aurora (Home/Profile), Nebula (Chat)
    ============================================ */
 
 /* ============================================
@@ -126,77 +126,6 @@
 }
 
 /* ============================================
-   THEME 3: QUANTUM (Cyberpunk Mode)
-   Inspiration: Cyberpunk 2077 + Neon
-   Used in: MapPage, StatusModal
-   ============================================ */
-:root[data-theme="quantum"],
-.theme-quantum {
-    /* Primary Colors - Neon Cyan */
-    --primary-500: 8 145 178;
-    /* #0891B2 - Cyan-600 */
-    --primary-400: 6 182 212;
-    /* #06B6D4 - Cyan-500 */
-    --primary-300: 34 211 238;
-    /* #22D3EE - Cyan-400 */
-
-    /* Accent Colors - Neon */
-    --accent-magenta: 217 70 239;
-    /* #D946EF - Fuchsia-500 */
-    --accent-purple: 168 85 247;
-    /* #A855F7 - Purple-500 */
-    --accent-blue: 59 130 246;
-    /* #3B82F6 - Blue-500 */
-    --accent-lime: 132 204 22;
-    /* #84CC16 - Lime-500 */
-    --accent-pink: 236 72 153;
-    /* #EC4899 - Pink-500 */
-
-    /* Background Colors - Ultra-dark with transparency */
-    --bg-main: 15 23 42 / 0.6;
-    /* Slate-900/60 */
-    --bg-card: 30 41 59 / 0.7;
-    /* Slate-800/70 */
-    --bg-secondary: 51 65 85 / 0.5;
-    /* Slate-700/50 */
-    --bg-hover: 71 85 105 / 0.4;
-    /* Slate-600/40 */
-
-    /* Text Colors */
-    --text-primary: 255 255 255;
-    /* #FFFFFF */
-    --text-secondary: 34 211 238;
-    /* #22D3EE - Cyan */
-    --text-tertiary: 148 163 184;
-    /* #94A3B8 - Slate-400 */
-
-    /* Glass Effect - Ultra translucent */
-    --glass-bg: 15 23 42 / 0.6;
-    --glass-border: 34 211 238 / 0.4;
-
-    /* Neon Glow Effects */
-    --glow-cyan: 0 0 60px rgb(34 211 238 / 0.4);
-    --glow-magenta: 0 0 40px rgb(217 70 239 / 0.3);
-    --glow-purple: 0 0 50px rgb(168 85 247 / 0.35);
-
-    /* Shadows with neon */
-    --shadow-sm: 0 1px 2px 0 rgb(34 211 238 / 0.1);
-    --shadow-md: 0 4px 6px -1px rgb(34 211 238 / 0.2);
-    --shadow-lg: 0 10px 15px -3px rgb(34 211 238 / 0.3);
-    --shadow-xl: var(--glow-cyan);
-
-    /* Mesh Gradient - Neon */
-    --mesh-1: 34 211 238 / 0.15;
-    /* Cyan */
-    --mesh-2: 217 70 239 / 0.12;
-    /* Magenta */
-    --mesh-3: 168 85 247 / 0.1;
-    /* Purple */
-    --mesh-4: 59 130 246 / 0.08;
-    /* Blue */
-}
-
-/* ============================================
    UTILITY CLASSES
    ============================================ */
 
@@ -262,19 +191,6 @@
 
 .shadow-theme-xl {
     box-shadow: var(--shadow-xl);
-}
-
-/* Quantum-specific neon glow */
-.theme-quantum .neon-glow-cyan {
-    box-shadow: var(--glow-cyan);
-}
-
-.theme-quantum .neon-glow-magenta {
-    box-shadow: var(--glow-magenta);
-}
-
-.theme-quantum .neon-glow-purple {
-    box-shadow: var(--glow-purple);
 }
 
 /* Scrollbar hiding utility */

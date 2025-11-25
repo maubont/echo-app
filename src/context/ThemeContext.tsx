@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
-type ThemeName = 'aurora' | 'nebula' | 'quantum';
+type ThemeName = 'aurora' | 'nebula';
 
 interface ThemeContextType {
     theme: ThemeName;
@@ -12,8 +12,8 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const location = useLocation();
-    // Default to Quantum theme for the entire app
-    const [theme, setThemeState] = useState<ThemeName>('quantum');
+    // Default to Nebula theme for the entire app
+    const [theme, setThemeState] = useState<ThemeName>('nebula');
 
     // Commented out for now - will enable contextual themes later
     // useEffect(() => {
@@ -21,8 +21,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     //     
     //     if (path === '/chat') {
     //         setThemeState('nebula');
-    //     } else if (path === '/map') {
-    //         setThemeState('quantum');
     //     } else {
     //         setThemeState('aurora');
     //     }

@@ -165,19 +165,7 @@ export const ProfilePage = () => {
                 <div className="bg-theme-card/80 backdrop-blur-lg p-4 rounded-2xl shadow-theme-sm border transition-all duration-300" style={{ borderColor: 'rgb(var(--glass-border))' }}>
                     <h3 className="text-xs font-bold text-theme-tertiary uppercase mb-3">Tema Visual</h3>
 
-                    <div className="grid grid-cols-3 gap-3">
-                        {/* Quantum */}
-                        <button
-                            onClick={() => setTheme('quantum')}
-                            disabled={!isEditing}
-                            className={`p-3 rounded-xl border-2 transition-all ${currentTheme === 'quantum' ? 'shadow-theme-lg' : 'border-transparent opacity-60 hover:opacity-90'}`}
-                            style={currentTheme === 'quantum' ? { borderColor: 'rgb(var(--primary-500))' } : {}}
-                        >
-                            <div className="aspect-square rounded-lg mb-2 bg-gradient-to-br from-cyan-400 via-blue-600 to-purple-600"></div>
-                            <p className="text-xs font-bold text-theme-primary">Quantum</p>
-                            <p className="text-[10px] text-theme-tertiary">Cyberpunk</p>
-                        </button>
-
+                    <div className="grid grid-cols-2 gap-3">
                         {/* Aurora */}
                         <button
                             onClick={() => setTheme('aurora')}
