@@ -1,6 +1,6 @@
 # Supabase Database Schema
 
-Este documento contiene el schema completo de la base de datos para Proxi App.
+Este documento contiene el schema completo de la base de datos para Echo.
 
 ## Script Completo (Ejecutar en SQL Editor de Supabase)
 
@@ -181,7 +181,7 @@ Información de perfil de usuarios (extiende auth.users de Supabase)
 Ubicaciones en tiempo real de los usuarios
 
 ### user_statuses
-Estados efímeros "Proxi Pulse"
+Estados efímeros "Echo Pulse"
 
 ### conversations
 Metadata de conversaciones de chat
@@ -261,7 +261,7 @@ create index user_locations_user_id_idx on user_locations (user_id);
 ```
 
 ### 3. user_statuses
-Proxi Pulse ephemeral statuses
+Echo Pulse ephemeral statuses
 
 ```sql
 create table user_statuses (

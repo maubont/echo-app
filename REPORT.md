@@ -1,7 +1,7 @@
-# Proxi App - Refactoring Report
+# Echo - Refactoring Report
 
 ## Resumen
-Se ha completado la refactorización de la aplicación **Proxi App**, migrando de un archivo monolítico `index.tsx` a una arquitectura modular profesional basada en **Vite + React + TypeScript**. Se ha implementado **Tailwind CSS v4** y **React Router DOM** para la navegación.
+Se ha completado la refactorización de la aplicación **Echo**, migrando de un archivo monolítico `index.tsx` a una arquitectura modular profesional basada en **Vite + React + TypeScript**. Se ha implementado **Tailwind CSS v4** y **React Router DOM** para la navegación.
 
 ## Cambios Realizados
 

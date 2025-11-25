@@ -1,8 +1,8 @@
-# Proxi App
+# Echo
 
-Proxi App es una plataforma de redes sociales basada en geolocalización que conecta a las personas en tiempo real según su ubicación y modo de interacción (Networking, Dating, Amigos, Eventos).
+Echo es una plataforma de redes sociales basada en geolocalización que conecta a las personas en tiempo real según su ubicación y modo de interacción (Networking, Dating, Amigos, Eventos).
 
-![Proxi App Banner](https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6)
+![Echo Banner](https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6)
 
 ## 🚀 Características Principales
 
@@ -30,8 +30,8 @@ Proxi App es una plataforma de redes sociales basada en geolocalización que con
 
 1. **Clonar el repositorio**
    ```bash
-   git clone https://github.com/maubont/proxi-app.git
-   cd proxi-app
+   git clone https://github.com/maubont/echo-app.git
+   cd echo-app
    ```
 
 2. **Instalar dependencias**
@@ -58,7 +58,7 @@ La aplicación utiliza **Row Level Security (RLS)** de PostgreSQL para asegurar 
 
 ## 📱 PWA (Progressive Web App)
 
-Proxi App está configurada como una PWA, lo que permite instalarla en dispositivos móviles y de escritorio para una experiencia nativa.
+Echo está configurada como una PWA, lo que permite instalarla en dispositivos móviles y de escritorio para una experiencia nativa.
 
 ---
 

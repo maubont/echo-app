@@ -1,4 +1,4 @@
-// Proxi Pulse Status Service
+// Echo Pulse Status Service
 import { supabase } from '../lib/supabase';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { UserStatus } from '../lib/types';

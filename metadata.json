@@ -1,7 +1,14 @@
 {
-  "description": "Proxi App - Real-time discovery MVP",
+  "description": "Echo - Conecta con tu círculo cercano en tiempo real",
+  "keywords": [
+    "social",
+    "geolocation",
+    "real-time",
+    "proximity",
+    "networking"
+  ],
   "requestFramePermissions": [
     "geolocation"
   ],
-  "name": "Proxi App"
+  "name": "Echo"
 }

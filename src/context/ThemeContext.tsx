@@ -36,7 +36,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const setTheme = (newTheme: ThemeName) => {
         setThemeState(newTheme);
         // Optionally save to localStorage for manual override
-        localStorage.setItem('proxi-theme-override', newTheme);
+        localStorage.setItem('echo-theme-override', newTheme);
     };
 
     return (
