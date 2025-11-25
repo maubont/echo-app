@@ -62,8 +62,8 @@ export const HomePage = () => {
 
             {/* Visibility Card */}
             <div className={`rounded-3xl p-6 shadow-theme-xl mb-6 overflow-hidden flex flex-col gap-4 relative transition-all duration-500 ${isVisible
-                    ? 'bg-gradient-to-br from-primary/20 via-bg-card to-bg-card border-2'
-                    : 'bg-theme-card/50 border'
+                ? 'bg-gradient-to-br from-primary/20 via-bg-card to-bg-card border-2'
+                : 'bg-theme-card/50 border'
                 }`}
                 style={isVisible ? { borderColor: 'rgb(var(--primary-500) / 0.5)' } : { borderColor: 'rgb(var(--bg-secondary))' }}
             >
@@ -107,8 +107,8 @@ export const HomePage = () => {
                     onClick={handleToggleVisibility}
                     disabled={loading}
                     className={`w-full py-3 rounded-xl font-bold text-sm transition-all shadow-theme-lg active:scale-[0.98] disabled:opacity-70 ${isVisible
-                            ? 'bg-primary text-white hover:bg-primary/90'
-                            : 'retro-illuminated text-theme-primary hover:shadow-theme-xl'
+                        ? 'bg-primary text-white hover:bg-primary/90'
+                        : 'retro-illuminated text-theme-primary hover:shadow-theme-xl'
                         }`}
                 >
                     {loading ? 'Actualizando...' : isVisible ? 'Ocultarme Ahora' : 'Hacerme Visible'}
@@ -119,7 +119,7 @@ export const HomePage = () => {
             <div className="grid grid-cols-2 gap-4">
                 <div
                     onClick={() => navigate('/map')}
-                    className="retro-illuminated bg-theme-card/80 backdrop-blur-lg p-5 rounded-2xl shadow-theme-sm border cursor-pointer transition-all hover:-translate-y-1 hover:shadow-theme-md group flex flex-col items-center text-center"
+                    className="bg-theme-card/80 backdrop-blur-lg p-5 rounded-2xl shadow-theme-sm border cursor-pointer transition-all hover:-translate-y-1 hover:shadow-theme-md group flex flex-col items-center text-center"
                     style={{ borderColor: 'rgb(var(--glass-border))' }}
                 >
                     <div

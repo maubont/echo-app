@@ -169,6 +169,7 @@
 
 /* ============================================
    RETRO-ILLUMINATED BORDER EFFECT (PREMIUM)
+   Sleek, thin animated border
    ============================================ */
 
 @property --angle {
@@ -187,14 +188,14 @@
     position: relative;
     background-color: rgb(var(--bg-card));
     z-index: 0;
-    border: 2px solid transparent;
+    border: 1px solid transparent;
 }
 
-/* The animated border */
+/* The animated border - thin and sleek */
 .retro-illuminated::before {
     content: "";
     position: absolute;
-    inset: -3px;
+    inset: -1px;
     z-index: -1;
     background: conic-gradient(from var(--angle),
             transparent 0%,
