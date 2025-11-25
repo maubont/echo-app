@@ -186,13 +186,13 @@ export const ChatPage = () => {
     // View: Chat List
     if (!activeChatId) {
         return (
-            <div className="h-screen bg-white pb-[90px] flex flex-col">
+            <div className="min-h-screen bg-theme-main pb-[90px] flex flex-col transition-colors duration-300">
                 <div className="p-6 pb-2">
-                    <h1 className="text-2xl font-bold text-slate-900">Mensajes</h1>
+                    <h1 className="text-2xl font-bold text-theme-primary">Mensajes</h1>
                 </div>
-                <div className="flex-1 overflow-y-auto px-4">
+                <div className="flex-1 overflow-y-auto px-4 space-y-2">
                     {conversations.length === 0 ? (
-                        <div className="text-center mt-20 text-slate-400">
+                        <div className="text-center mt-20 text-theme-tertiary">
                             <MessageCircle size={48} className="mx-auto mb-4 opacity-50" />
                             <p>No tienes mensajes aún.</p>
                             <Button variant="ghost" label="Ir al mapa" onClick={() => navigate('/map')} className="mt-4" />
@@ -202,27 +202,28 @@ export const ChatPage = () => {
                             <div
                                 key={chat.id}
                                 onClick={() => handleChatClick(chat.id)}
-                                className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer border-b border-slate-50 last:border-0"
+                                className="flex items-center gap-4 p-4 rounded-2xl hover:bg-theme-secondary/30 transition-all cursor-pointer border border-transparent hover:border-theme-secondary/10 active:scale-[0.99]"
                             >
                                 <div className="relative">
                                     <img
                                         src={chat.participantAvatar || `https://ui-avatars.com/api/?name=${chat.participantName}&background=random`}
-                                        className="w-12 h-12 rounded-full object-cover border border-slate-100"
+                                        className="w-12 h-12 rounded-full object-cover border-2 shadow-sm"
+                                        style={{ borderColor: 'rgb(var(--bg-card))' }}
                                     />
                                     {chat.unreadCount > 0 && (
-                                        <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full ring-2 ring-white">
+                                        <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full" style={{ boxShadow: '0 0 0 2px rgb(var(--bg-main))' }}>
                                             {chat.unreadCount}
                                         </span>
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-baseline mb-0.5">
-                                        <h3 className="font-bold text-slate-900 truncate">{chat.participantName}</h3>
-                                        <span className="text-[10px] text-slate-400">
+                                        <h3 className="font-bold text-theme-primary truncate">{chat.participantName}</h3>
+                                        <span className="text-[10px] text-theme-tertiary">
                                             {new Date(chat.lastTimestamp).getHours()}:{new Date(chat.lastTimestamp).getMinutes().toString().padStart(2, '0')}
                                         </span>
                                     </div>
-                                    <p className={`text-sm truncate ${chat.unreadCount > 0 ? 'text-slate-800 font-semibold' : 'text-slate-500'}`}>
+                                    <p className={`text-sm truncate ${chat.unreadCount > 0 ? 'text-theme-primary font-semibold' : 'text-theme-secondary'}`}>
                                         {chat.lastMessage || 'Inicia la conversación'}
                                     </p>
                                 </div>
@@ -236,35 +237,36 @@ export const ChatPage = () => {
 
     // View: Conversation Detail
     return (
-        <div className="fixed top-0 bottom-0 w-full max-w-md left-0 right-0 mx-auto z-50 bg-white flex flex-col shadow-2xl overflow-hidden">
+        <div className="fixed top-0 bottom-0 w-full max-w-md left-0 right-0 mx-auto z-50 bg-theme-main flex flex-col shadow-2xl overflow-hidden transition-colors duration-300">
             {/* Header */}
-            <div className="flex-none h-16 px-4 border-b border-slate-100 flex items-center gap-3 bg-white shadow-sm z-50">
-                <button onClick={() => setActiveChatId(null)} className="p-2 -ml-2 hover:bg-slate-50 rounded-full transition-colors">
-                    <ArrowLeft size={20} className="text-slate-700" />
+            <div className="flex-none h-16 px-4 border-b flex items-center gap-3 bg-theme-card/90 backdrop-blur-xl shadow-theme-sm z-50 transition-all duration-300" style={{ borderColor: 'rgb(var(--glass-border))' }}>
+                <button onClick={() => setActiveChatId(null)} className="p-2 -ml-2 rounded-full transition-colors hover:bg-theme-secondary/30">
+                    <ArrowLeft size={20} className="text-theme-primary" />
                 </button>
                 <div className="relative">
                     <img
                         src={activeChat?.participantAvatar || `https://ui-avatars.com/api/?name=${activeChat?.participantName}`}
-                        className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
+                        className="w-10 h-10 rounded-full object-cover border-2 shadow-theme-sm"
+                        style={{ borderColor: 'rgb(var(--primary-500))' }}
                     />
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full ring-2 ring-white"></span>
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-primary rounded-full" style={{ boxShadow: '0 0 0 2px rgb(var(--bg-card))' }}></span>
                 </div>
                 <div className="flex-1">
-                    <h3 className="font-bold text-slate-900 text-sm">{activeChat?.participantName}</h3>
-                    <p className="text-xs text-slate-500 font-medium flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> En línea
+                    <h3 className="font-bold text-theme-primary text-sm">{activeChat?.participantName}</h3>
+                    <p className="text-xs text-theme-secondary font-medium flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span> En línea
                     </p>
                 </div>
-                <button className="p-2 text-slate-500 hover:bg-slate-50 rounded-full transition-colors">
+                <button className="p-2 text-theme-secondary hover:bg-theme-secondary/20 rounded-full transition-colors">
                     <Phone size={20} />
                 </button>
-                <button className="p-2 text-slate-500 hover:bg-slate-50 rounded-full transition-colors">
+                <button className="p-2 text-theme-secondary hover:bg-theme-secondary/20 rounded-full transition-colors">
                     <MoreVertical size={20} />
                 </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 pb-32">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32 transition-colors duration-300" style={{ background: 'rgb(var(--bg-secondary) / 0.3)' }}>
                 {/* Subtle Chat Pattern */}
                 <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")` }}></div>
 
@@ -283,12 +285,13 @@ export const ChatPage = () => {
                     const isMe = msg.senderId === session?.user.id;
                     return (
                         <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in-up`}>
-                            <div className={`max-w-[75%] px-5 py-3 text-sm shadow-sm ${isMe
-                                ? 'bg-gradient-to-br from-blue-600 to-blue-500 text-white rounded-2xl rounded-tr-sm shadow-blue-500/20'
-                                : 'bg-white text-slate-700 border border-slate-100 rounded-2xl rounded-tl-sm shadow-sm'
-                                }`}>
+                            <div className={`max-w-[75%] px-5 py-3 text-sm shadow-theme-md transition-all ${isMe
+                                ? 'bg-primary text-white rounded-2xl rounded-tr-sm'
+                                : 'bg-theme-card/80 backdrop-blur-lg text-theme-primary border rounded-2xl rounded-tl-sm'
+                                }`}
+                                style={!isMe ? { borderColor: 'rgb(var(--glass-border))' } : {}}>
                                 {msg.text}
-                                <div className={`text-[10px] mt-1 text-right opacity-70 font-medium ${isMe ? 'text-blue-100' : 'text-slate-400'}`}>
+                                <div className={`text-[10px] mt-1 text-right opacity-70 font-medium ${isMe ? '' : 'text-theme-tertiary'}`} style={isMe ? { color: 'rgba(255, 255, 255, 0.7)' } : {}}>
                                     {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>
                             </div>
@@ -299,11 +302,11 @@ export const ChatPage = () => {
                 {/* Typing Indicator */}
                 {isTyping && (
                     <div className="flex justify-start">
-                        <div className="bg-white border border-slate-100 px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm">
+                        <div className="bg-theme-card/80 backdrop-blur-lg border px-4 py-3 rounded-2xl rounded-tl-sm shadow-theme-sm" style={{ borderColor: 'rgb(var(--glass-border))' }}>
                             <div className="flex gap-1">
-                                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'rgb(var(--text-tertiary))', animationDelay: '0ms' }}></div>
+                                <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'rgb(var(--text-tertiary))', animationDelay: '150ms' }}></div>
+                                <div className="w-2 h-2 rounded-full animate-bounce" style={{ background: 'rgb(var(--text-tertiary))', animationDelay: '300ms' }}></div>
                             </div>
                         </div>
                     </div>
@@ -321,11 +324,11 @@ export const ChatPage = () => {
             )}
 
             {/* Input */}
-            <div className="fixed bottom-24 left-0 right-0 p-4 bg-gradient-to-t from-white/0 via-white/50 to-transparent z-[60] pointer-events-none">
-                <div className="max-w-md mx-auto glass rounded-full p-1.5 flex items-center gap-2 shadow-xl shadow-blue-900/5 border border-white/50 pointer-events-auto">
+            <div className="fixed bottom-24 left-0 right-0 p-4 z-[60] pointer-events-none" style={{ background: 'linear-gradient(to top, transparent, rgb(var(--bg-main) / 0.5), transparent)' }}>
+                <div className="max-w-md mx-auto glass-effect rounded-full p-1.5 flex items-center gap-2 shadow-theme-xl pointer-events-auto transition-all duration-300">
                     <div className="pl-4 flex-1">
                         <input
-                            className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400 font-medium"
+                            className="w-full bg-transparent text-sm outline-none font-medium text-theme-primary placeholder-theme-tertiary"
                             placeholder="Escribe un mensaje..."
                             value={inputText}
                             onChange={e => setInputText(e.target.value)}
@@ -335,7 +338,7 @@ export const ChatPage = () => {
                     <button
                         onClick={handleSend}
                         disabled={!inputText.trim()}
-                        className="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/30 hover:scale-105 active:scale-95 flex-shrink-0"
+                        className="bg-primary text-white p-3 rounded-full hover:shadow-theme-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95 flex-shrink-0"
                     >
                         <Send size={18} />
                     </button>

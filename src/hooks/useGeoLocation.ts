@@ -30,7 +30,7 @@ export const useGeoLocation = () => {
         setState(s => ({ ...s, loading: true, error: null }));
 
         // Use mock or real geolocation with automatic fallback
-        getMockOrRealPosition(true) // Set to true to always use mock for now
+        getMockOrRealPosition(false) // Set to false to try real GPS first
             .then((pos) => {
                 setState({
                     coords: { lat: pos.coords.latitude, lng: pos.coords.longitude },

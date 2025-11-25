@@ -17,10 +17,10 @@ export const Button: React.FC<ButtonProps> = ({ onClick, label, icon, variant = 
     const base = "rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100";
     const sizes = { xs: "py-1.5 px-3 text-xs", sm: "py-2 px-4 text-sm", md: "py-3 px-6 text-base" };
     const variants = {
-        primary: "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 hover:-translate-y-0.5 border border-transparent",
-        secondary: "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-sm hover:shadow-md",
-        outline: "bg-transparent border-2 border-slate-200 text-slate-600 hover:border-slate-800 hover:text-slate-900",
-        ghost: "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+        primary: "bg-primary text-white shadow-theme-lg hover:shadow-theme-xl hover:-translate-y-0.5 border border-transparent",
+        secondary: "bg-theme-card text-theme-primary border shadow-theme-sm hover:shadow-theme-md",
+        outline: "bg-transparent border-2 text-theme-secondary hover:text-theme-primary",
+        ghost: "bg-transparent text-theme-secondary hover:bg-theme-secondary/10 hover:text-theme-primary",
         danger: "bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 hover:border-red-200"
     };
 

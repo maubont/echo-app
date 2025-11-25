@@ -84,7 +84,8 @@ export const getCurrentPosition = (useMock: boolean = DEFAULT_CONFIG.enabled): P
         navigator.geolocation.getCurrentPosition(
             resolve,
             (error) => {
-                console.warn('Geolocation failed. Falling back to mock:', error.message);
+                console.error('❌ Geolocation failed. Error Code:', error.code, 'Message:', error.message);
+                console.warn('⚠️ Falling back to mock location (Bogotá) due to error.');
                 getMockPosition().then(resolve);
             },
             {

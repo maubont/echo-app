@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { X, MessageCircle } from 'lucide-react';
+import { X, MessageCircle, Locate, Sparkles, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -41,41 +41,41 @@ const PublicProfileModal = ({ entity, onClose }: { entity: MapEntity, onClose: (
 
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-white/90 backdrop-blur-xl w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-10 duration-300 border border-white/20">
-                <div className="h-32 bg-gradient-to-br from-blue-500 via-blue-600 to-purple-600 relative">
+            <div className="glass-effect w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl animate-in slide-in-from-bottom-10 duration-300 border transition-all" style={{ borderColor: 'rgb(var(--glass-border))' }}>
+                <div className="h-32 relative" style={{ background: 'linear-gradient(135deg, rgb(var(--primary-500)), rgb(var(--accent-magenta)))' }}>
                     <button onClick={onClose} className="absolute top-4 right-4 bg-black/20 hover:bg-black/30 text-white p-2 rounded-full transition-all hover:scale-105 backdrop-blur-sm">
                         <X size={20} />
                     </button>
                 </div>
                 <div className="px-6 pb-8 -mt-16 relative">
-                    <div className="w-32 h-32 bg-white p-1.5 rounded-full shadow-xl mb-4 mx-auto relative group">
+                    <div className="w-32 h-32 p-1.5 rounded-full shadow-theme-xl mb-4 mx-auto relative group" style={{ background: 'rgb(var(--bg-card))' }}>
                         <img
                             src={entity.avatarUrl || `https://ui-avatars.com/api/?name=${entity.name}&background=random`}
-                            className="w-full h-full rounded-full object-cover border border-slate-100"
+                            className="w-full h-full rounded-full object-cover border" style={{ borderColor: 'rgb(var(--glass-border))' }}
                         />
-                        <div className={`absolute bottom-2 right-2 w-6 h-6 rounded-full border-4 border-white ${entity.type === 'business' ? 'bg-purple-500' : 'bg-green-500'}`} />
+                        <div className={`absolute bottom-2 right-2 w-6 h-6 rounded-full border-4 ${entity.type === 'business' ? 'bg-accent-purple' : 'bg-primary'}`} style={{ borderColor: 'rgb(var(--bg-card))' }} />
                     </div>
 
                     <div className="text-center mb-6">
-                        <h2 className="text-2xl font-bold text-slate-900 mb-1">{entity.name}</h2>
-                        <p className="text-slate-500 font-medium flex items-center justify-center gap-2">
-                            {entity.type === 'business' ? 'Negocio Local' : 'Persona'} • <span className="uppercase text-xs font-bold tracking-wider bg-slate-100 px-2 py-0.5 rounded-full">{entity.mode}</span>
+                        <h2 className="text-2xl font-bold text-theme-primary mb-1">{entity.name}</h2>
+                        <p className="text-theme-secondary font-medium flex items-center justify-center gap-2">
+                            {entity.type === 'business' ? 'Negocio Local' : 'Persona'} • <span className="uppercase text-xs font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary/20" style={{ color: 'rgb(var(--primary-500))' }}>{entity.mode}</span>
                         </p>
                     </div>
 
                     <div className="flex flex-wrap justify-center gap-2 mb-6">
                         {entity.categories.map(cat => (
-                            <span key={cat} className="bg-blue-50/80 backdrop-blur-sm text-blue-700 px-3 py-1 rounded-full text-xs font-bold border border-blue-100">
+                            <span key={cat} className="backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold border bg-primary/10" style={{ color: 'rgb(var(--primary-500))', borderColor: 'rgb(var(--primary-500) / 0.3)' }}>
                                 {cat}
                             </span>
                         ))}
                     </div>
 
-                    <p className="text-sm text-slate-600 bg-slate-50/80 p-4 rounded-2xl mb-8 border border-slate-100 leading-relaxed text-center">
+                    <p className="text-sm text-theme-secondary p-4 rounded-2xl mb-8 border leading-relaxed text-center" style={{ background: 'rgb(var(--bg-secondary) / 0.3)', borderColor: 'rgb(var(--glass-border))' }}>
                         "{entity.description}"
                     </p>
 
-                    <Button fullWidth label="Enviar Mensaje" icon={<MessageCircle size={20} />} onClick={handleConnect} className="shadow-xl shadow-blue-500/20" />
+                    <Button fullWidth label="Enviar Mensaje" icon={<MessageCircle size={20} />} onClick={handleConnect} className="shadow-theme-xl" />
                 </div>
             </div>
         </div>
@@ -214,10 +214,13 @@ export const MapPage = () => {
         if (!containerRef.current || mapRef.current) return;
 
         const map = L.map(containerRef.current, {
-            zoomControl: true,
+            zoomControl: false,
             attributionControl: false,
             minZoom: 3
         }).setView([INITIAL_VIEW.lat, INITIAL_VIEW.lng], 5); // Zoomed out view of Colombia
+
+        // Add Zoom Control to bottom-left to avoid search bar overlap
+        L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
@@ -528,20 +531,27 @@ export const MapPage = () => {
             )}
 
             {/* Bottom Controls */}
-            <div className="absolute bottom-24 right-4 flex flex-col gap-3 z-[400]">
-                <button
-                    onClick={handleRecenter}
-                    className="w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
-                </button>
-                <button
-                    onClick={() => setShowStatusModal(true)}
-                    className="w-12 h-12 bg-blue-600 rounded-full shadow-lg shadow-blue-200 flex items-center justify-center text-white hover:bg-blue-700 transition-colors"
-                >
-                    <span className="text-xl">💬</span>
-                </button>
-            </div>
+            {!showStatusModal && (
+                <div className="absolute bottom-28 right-4 flex flex-col gap-4 z-[400]">
+                    <button
+                        onClick={handleRecenter}
+                        className="w-12 h-12 glass-effect rounded-full shadow-theme-lg flex items-center justify-center text-theme-primary hover:shadow-theme-xl transition-all active:scale-95"
+                        title="Centrar en mi ubicación"
+                    >
+                        <Locate size={22} />
+                    </button>
+                    <button
+                        onClick={() => setShowStatusModal(true)}
+                        className="w-14 h-14 bg-primary rounded-full flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-all border-2 relative group"
+                        style={{ boxShadow: 'var(--glow-cyan)', borderColor: 'rgb(var(--primary-300) / 0.3)' }}
+                    >
+                        <Sparkles size={24} className="animate-pulse" />
+                        <span className="absolute right-full mr-3 glass-effect px-3 py-1 rounded-xl text-xs font-bold text-theme-primary shadow-theme-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">
+                            Actualizar Estado
+                        </span>
+                    </button>
+                </div>
+            )}
 
             {/* Modals */}
             {selectedEntity && showProfileModal && (
