@@ -103,7 +103,7 @@ export const HomePage = () => {
             <div className="grid grid-cols-2 gap-4">
                 <div
                     onClick={() => navigate('/map')}
-                    className="bg-theme-card/80 backdrop-blur-lg p-5 rounded-2xl shadow-theme-sm border cursor-pointer transition-all hover:-translate-y-1 hover:shadow-theme-md group flex flex-col items-center text-center"
+                    className="retro-illuminated bg-theme-card/80 backdrop-blur-lg p-5 rounded-2xl shadow-theme-sm border cursor-pointer transition-all hover:-translate-y-1 hover:shadow-theme-md group flex flex-col items-center text-center"
                     style={{ borderColor: 'rgb(var(--glass-border))' }}
                 >
                     <div

@@ -53,9 +53,12 @@ export const ProfilePage = () => {
             <div className="bg-theme-card/90 backdrop-blur-xl p-6 rounded-b-3xl shadow-theme-md mb-4 border-b transition-all duration-300" style={{ borderColor: 'rgb(var(--glass-border))' }}>
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-xl font-bold text-theme-primary">Mi Perfil</h1>
-                    <button onClick={() => isEditing ? handleSave() : setIsEditing(true)} className="font-bold text-sm px-3 py-1 rounded-lg transition-all bg-primary text-white hover:shadow-theme-md">
-                        {isEditing ? 'Guardar' : 'Editar'}
-                    </button>
+                    <Button
+                        label={isEditing ? 'Guardar' : 'Editar'}
+                        onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+                        variant="premium"
+                        size="xs"
+                    />
                 </div>
 
                 <div className="flex flex-col items-center">

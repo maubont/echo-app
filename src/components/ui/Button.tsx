@@ -4,7 +4,7 @@ interface ButtonProps {
     onClick?: () => void;
     label: string;
     icon?: React.ReactNode;
-    variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline';
+    variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'outline' | 'premium';
     size?: 'xs' | 'sm' | 'md';
     fullWidth?: boolean;
     disabled?: boolean;
@@ -21,7 +21,8 @@ export const Button: React.FC<ButtonProps> = ({ onClick, label, icon, variant = 
         secondary: "bg-theme-card text-theme-primary border shadow-theme-sm hover:shadow-theme-md",
         outline: "bg-transparent border-2 text-theme-secondary hover:text-theme-primary",
         ghost: "bg-transparent text-theme-secondary hover:bg-theme-secondary/10 hover:text-theme-primary",
-        danger: "bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 hover:border-red-200"
+        danger: "bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 hover:border-red-200",
+        premium: "retro-illuminated text-theme-primary font-bold shadow-theme-lg hover:shadow-theme-xl"
     };
 
     return (
