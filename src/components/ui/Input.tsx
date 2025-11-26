@@ -7,11 +7,16 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export const Input: React.FC<InputProps> = ({ label, icon, className, ...props }) => (
     <div className="w-full">
-        {label && <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{label}</label>}
+        {label && <label className="block text-xs font-bold text-theme-tertiary uppercase mb-1">{label}</label>}
         <div className="relative">
-            {icon && <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">{icon}</div>}
+            {icon && <div className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-tertiary">{icon}</div>}
             <input
-                className={`w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-blue-500 transition-colors focus:bg-white ${icon ? 'pl-10' : ''} ${className}`}
+                className={`w-full border rounded-lg p-3 text-sm outline-none transition-all focus:shadow-theme-md ${icon ? 'pl-10' : ''} ${className}`}
+                style={{
+                    background: 'rgba(39, 39, 42, 0.5)',
+                    borderColor: 'rgba(88, 101, 242, 0.2)',
+                    color: 'rgb(250 250 250)',
+                }}
                 {...props}
             />
         </div>
