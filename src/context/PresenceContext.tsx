@@ -20,6 +20,7 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [presenceState, setPresenceState] = useState<PresenceState>({
         isVisible: false, lat: null, lng: null, lastHeartbeat: null
     });
+    const [broadcastCleanup, setBroadcastCleanup] = useState<(() => void) | null>(null);
 
     // 1. INITIAL FETCH & REALTIME SUBSCRIPTION
     useEffect(() => {
@@ -40,6 +41,11 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                     lat: data.latitude,
                     lng: data.longitude
                 }));
+
+                // If user was visible before, restart broadcasting
+                if (data.is_visible) {
+                    startLocationBroadcast();
+                }
             }
         };
         fetchInitialState();
@@ -56,7 +62,7 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                     filter: `user_id=eq.${session.user.id}`
                 },
                 (payload) => {
-                    const newData = payload.new as any; // Cast to any to avoid TS errors with dynamic Supabase types
+                    const newData = payload.new as any;
                     setPresenceState(prev => ({
                         ...prev,
                         isVisible: newData.is_visible,
@@ -69,37 +75,76 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         return () => {
             supabase.removeChannel(channel);
+            // Stop broadcasting on unmount
+            if (broadcastCleanup) {
+                broadcastCleanup();
+            }
         };
     }, [session?.user?.id]);
+
+    const getCurrentLocation = (): Promise<GeolocationPosition> => {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject(new Error('Geolocation not supported'));
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            });
+        });
+    };
+
+    const startLocationBroadcast = async () => {
+        if (!session?.user?.id) return;
+
+        try {
+            // Stop any existing broadcast first
+            if (broadcastCleanup) {
+                broadcastCleanup();
+            }
+
+            // Start new broadcast
+            const cleanup = await locationService.startBroadcasting(
+                session.user.id,
+                getCurrentLocation,
+                10000 // Update every 10 seconds
+            );
+
+            setBroadcastCleanup(() => cleanup);
+        } catch (error) {
+            console.error('Failed to start location broadcast:', error);
+            throw error;
+        }
+    };
 
     const presenceMethods = {
         state: presenceState,
 
         toggleVisibility: async (minutes = 60) => {
-            // We optimistically update UI, but the real truth comes from DB subscription
             const newVisibility = !presenceState.isVisible;
 
             try {
                 if (newVisibility) {
-                    // To become visible, we need location. 
-                    // We assume locationService is handled by the component calling this, 
-                    // OR we trigger a one-time update here if needed.
-                    // For now, we rely on the component to start broadcasting.
-                    // BUT, if we just want to toggle the flag:
-                    await locationService.setVisibility(true);
+                    // Becoming visible: start broadcasting location
+                    await startLocationBroadcast();
                 } else {
+                    // Becoming invisible: stop broadcasting
+                    if (broadcastCleanup) {
+                        broadcastCleanup();
+                        setBroadcastCleanup(null);
+                    }
                     await locationService.stopBroadcasting();
                 }
             } catch (error) {
                 console.error("Error toggling visibility:", error);
-                // Revert optimistic update if needed (though subscription handles truth)
+                throw error;
             }
         },
 
         syncLocation: (lat: number, lng: number) => {
             setPresenceState(prev => ({ ...prev, lat, lng, lastHeartbeat: Date.now() }));
-            // We don't push to DB here on every sync to avoid flooding, 
-            // locationService.startBroadcasting handles the interval updates.
         }
     };
 
