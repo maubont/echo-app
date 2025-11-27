@@ -99,7 +99,7 @@ export const MapPage = () => {
 
     // Filter state
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-    const [maxDistance, setMaxDistance] = useState<number>(5000); // meters
+    const [maxDistance, setMaxDistance] = useState<number>(50000); // Default 50km for better testing
     const [showFilters, setShowFilters] = useState(false);
 
     // Load entities from Supabase - Real-time location and status tracking
@@ -338,7 +338,8 @@ export const MapPage = () => {
 
         // Update or Create markers
         filteredEntities.forEach(ent => {
-            if (ent.mode !== session?.user.currentMode && ent.type !== 'business') return;
+            // Removed mode filter for now as we don't have remote user profiles yet
+            // if (ent.mode !== session?.user.currentMode && ent.type !== 'business') return;
 
             const hasStatus = ent.status && ent.status.expiresAt > Date.now();
             const iconHtml = hasStatus
@@ -468,7 +469,7 @@ export const MapPage = () => {
 
             {/* Top Bar */}
             <div className="absolute top-4 left-4 right-4 z-[400] flex gap-3 max-w-md mx-auto">
-                <div className="flex-1 glass rounded-2xl flex items-center p-1.5 transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500/50">
+                <div className="flex-1 glass rounded-2xl flex items-center p-1.5 transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500/50 relative">
                     <form onSubmit={handleSearch} className="flex-1 flex items-center">
                         <input
                             type="text"
@@ -478,6 +479,11 @@ export const MapPage = () => {
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </form>
+                    {entities.length > 0 && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            {entities.length} cerca
+                        </span>
+                    )}
                 </div>
                 <button
                     onClick={() => setShowFilters(!showFilters)}
