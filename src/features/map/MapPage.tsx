@@ -25,6 +25,17 @@ if (typeof window !== 'undefined') {
 
 const INITIAL_VIEW = { lat: 4.5709, lng: -74.2973 }; // Colombia General View
 
+const STATUS_EMOJIS: Record<string, string> = {
+    coffee: '☕',
+    work: '💻',
+    home: '🏠',
+    food: '🍔',
+    party: '🎉',
+    gym: '💪',
+    study: '📚',
+    travel: '✈️'
+};
+
 const PublicProfileModal = ({ entity, onClose }: { entity: MapEntity, onClose: () => void }) => {
     const navigate = useNavigate();
 
@@ -162,7 +173,7 @@ export const MapPage = () => {
                     categories: [],
                     name: `Usuario ${loc.id.substring(0, 6)}`,
                     description: 'Disponible para conectar.',
-                    avatarUrl: `https://ui-avatars.com/api/?name=User`,
+                    avatarUrl: `https://ui-avatars.com/api/?name=${loc.id.substring(0, 2)}&background=random&color=fff`,
                     lastSeen: new Date(loc.updatedAt).getTime(),
                     status: status ? {
                         emoji: status.emoji,
@@ -176,36 +187,12 @@ export const MapPage = () => {
             setEntities(newEntities);
         });
 
-        // Start broadcasting own location
-        if (session?.user?.id) {
-            locationService.startBroadcasting(
-                session.user.id,
-                () => new Promise((resolve, reject) => {
-                    if (!coords) {
-                        reject(new Error('No coordinates'));
-                        return;
-                    }
-                    resolve({
-                        coords: {
-                            latitude: coords.lat,
-                            longitude: coords.lng,
-                            accuracy: 10,
-                            altitude: null,
-                            altitudeAccuracy: null,
-                            heading: null,
-                            speed: null
-                        },
-                        timestamp: Date.now()
-                    } as GeolocationPosition);
-                }),
-                10000 // Update every 10 seconds
-            );
-        }
+        // NOTE: Broadcasting is now handled globally by PresenceContext to persist across navigation.
+        // We do NOT start/stop broadcasting here anymore.
 
         return () => {
             unsubscribeLocations();
             unsubscribeStatuses();
-            locationService.stopBroadcasting();
         };
     }, [coords, session?.user.currentMode, maxDistance]);
 
@@ -342,17 +329,22 @@ export const MapPage = () => {
             // if (ent.mode !== session?.user.currentMode && ent.type !== 'business') return;
 
             const hasStatus = ent.status && ent.status.expiresAt > Date.now();
+            const statusEmoji = hasStatus ? (STATUS_EMOJIS[ent.status!.emoji] || '📍') : '';
+
             const iconHtml = hasStatus
-                ? `<div class="relative">
-                     <div class="w-12 h-12 bg-white rounded-full shadow-lg border-2 border-blue-500 flex items-center justify-center text-2xl animate-in zoom-in">
-                        ${ent.status!.emoji}
+                ? `<div class="relative w-12 h-12 group cursor-pointer transition-transform hover:scale-110">
+                     <div class="w-12 h-12 rounded-full border-2 border-white shadow-lg overflow-hidden bg-slate-200">
+                        <img src="${ent.avatarUrl || `https://ui-avatars.com/api/?name=${ent.name}&background=random`}" class="w-full h-full object-cover" onerror="this.src='https://ui-avatars.com/api/?name=User&background=random'"/>
                      </div>
-                     <div class="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap shadow-sm font-bold max-w-[100px] truncate">
+                     <div class="absolute -top-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md border border-gray-200 text-sm animate-in zoom-in">
+                        ${statusEmoji}
+                     </div>
+                     <div class="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm whitespace-nowrap border border-gray-100 max-w-[100px] truncate opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         ${ent.status!.text}
                      </div>
                    </div>`
-                : `<div class="w-10 h-10 rounded-full border-2 border-white shadow-lg overflow-hidden bg-slate-200">
-                     <img src="${ent.avatarUrl || `https://ui-avatars.com/api/?name=${ent.name}`}" class="w-full h-full object-cover" />
+                : `<div class="w-10 h-10 rounded-full border-2 border-white shadow-lg overflow-hidden bg-slate-200 cursor-pointer transition-transform hover:scale-110">
+                     <img src="${ent.avatarUrl || `https://ui-avatars.com/api/?name=${ent.name}&background=random`}" class="w-full h-full object-cover" onerror="this.src='https://ui-avatars.com/api/?name=User&background=random'"/>
                    </div>`;
 
             const customIcon = L.divIcon({
