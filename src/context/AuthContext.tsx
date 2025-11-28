@@ -139,10 +139,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
 
         updateProfile: async (updates: Partial<UserProfile>) => {
+            // 1. Update Auth User (Metadata)
             const { data, error } = await supabase.auth.updateUser({
                 data: updates
             });
             if (error) throw error;
+
+            // 2. Update Public Profile
+            if (data.user) {
+                const profileUpdates: any = {
+                    updated_at: new Date().toISOString()
+                };
+                if (updates.name) profileUpdates.name = updates.name;
+                if (updates.bio) profileUpdates.bio = updates.bio;
+                if (updates.avatarUrl) profileUpdates.avatar_url = updates.avatarUrl;
+                if (updates.currentMode) profileUpdates.current_mode = updates.currentMode;
+                if (updates.categories) profileUpdates.categories = updates.categories;
+
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .update(profileUpdates)
+                    .eq('id', data.user.id);
+
+                if (profileError) {
+                    console.error('Error updating public profile:', profileError);
+                }
+            }
+
             if (data.user && session) {
                 setSession({
                     ...session,

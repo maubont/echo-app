@@ -12,6 +12,9 @@ import { ProfilePage } from './features/profile/ProfilePage';
 import { ChatPage } from './features/chat/ChatPage';
 
 const App = () => {
+    // Version Log for Deployment Verification
+    console.log('🚀 Echo Pulse v1.2.0 - Loaded (Map Fixes + Profile Sync)');
+
     return (
         <Router>
             <ThemeProvider>
