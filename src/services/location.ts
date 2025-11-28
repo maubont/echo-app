@@ -16,6 +16,9 @@ interface NearbyUser {
     longitude: number;
     isVisible: boolean;
     updatedAt: string;
+    name: string;
+    avatarUrl: string | null;
+    mode: string;
 }
 
 class LocationService {
@@ -59,28 +62,62 @@ class LocationService {
     }
 
     /**
-     * Fetch nearby users' locations
+     * Fetch nearby users' locations with profile data
      */
     async fetchNearbyLocations(
         maxDistance: number = 5000 // meters
     ): Promise<NearbyUser[]> {
-        const { data, error } = await supabase
+        // 1. Get locations
+        const { data: locations, error: locError } = await supabase
             .from('user_locations')
             .select('*')
             .eq('is_visible', true);
 
-        if (error) {
-            console.error('Error fetching locations:', error);
+        if (locError) {
+            console.error('Error fetching locations:', locError);
             return [];
         }
 
-        return data.map((loc) => ({
-            id: loc.user_id,
-            latitude: loc.latitude,
-            longitude: loc.longitude,
-            isVisible: loc.is_visible,
-            updatedAt: loc.updated_at,
-        }));
+        if (!locations || locations.length === 0) return [];
+
+        // 2. Get profiles for these users
+        const userIds = locations.map(l => l.user_id);
+        const { data: profiles, error: profError } = await supabase
+            .from('profiles')
+            .select('id, name, avatar_url, current_mode')
+            .in('id', userIds);
+
+        if (profError) {
+            console.error('Error fetching profiles:', profError);
+            // Fallback to locations without profile data if profile fetch fails
+            return locations.map(loc => ({
+                id: loc.user_id,
+                latitude: loc.latitude,
+                longitude: loc.longitude,
+                isVisible: loc.is_visible,
+                updatedAt: loc.updated_at,
+                name: 'Usuario',
+                avatarUrl: null,
+                mode: 'networking'
+            }));
+        }
+
+        // 3. Merge data
+        const profileMap = new Map(profiles?.map(p => [p.id, p]));
+
+        return locations.map((loc) => {
+            const profile = profileMap.get(loc.user_id);
+            return {
+                id: loc.user_id,
+                latitude: loc.latitude,
+                longitude: loc.longitude,
+                isVisible: loc.is_visible,
+                updatedAt: loc.updated_at,
+                name: profile?.name || 'Usuario',
+                avatarUrl: profile?.avatar_url || null,
+                mode: profile?.current_mode || 'networking'
+            };
+        });
     }
 
     /**

@@ -169,11 +169,11 @@ export const MapPage = () => {
                     lat: loc.latitude,
                     lng: loc.longitude,
                     type: 'person',
-                    mode: session?.user.currentMode || 'networking',
-                    categories: [],
-                    name: `Usuario ${loc.id.substring(0, 6)}`,
+                    mode: (loc.mode as AppContextMode) || 'networking',
+                    categories: [], // Categories still need to be fetched if we want them, but for now empty is fine
+                    name: loc.name,
                     description: 'Disponible para conectar.',
-                    avatarUrl: `https://ui-avatars.com/api/?name=${loc.id.substring(0, 2)}&background=random&color=fff`,
+                    avatarUrl: loc.avatarUrl, // Use real avatar URL (can be null)
                     lastSeen: new Date(loc.updatedAt).getTime(),
                     status: status ? {
                         emoji: status.emoji,
