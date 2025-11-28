@@ -88,11 +88,29 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 reject(new Error('Geolocation not supported'));
                 return;
             }
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-            });
+
+            // Try high accuracy first
+            navigator.geolocation.getCurrentPosition(
+                resolve,
+                (error) => {
+                    console.warn('High accuracy location failed, trying low accuracy...', error);
+                    // Fallback to low accuracy
+                    navigator.geolocation.getCurrentPosition(
+                        resolve,
+                        reject,
+                        {
+                            enableHighAccuracy: false,
+                            timeout: 20000,
+                            maximumAge: 30000
+                        }
+                    );
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
         });
     };
 
@@ -109,7 +127,7 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const cleanup = await locationService.startBroadcasting(
                 session.user.id,
                 getCurrentLocation,
-                10000 // Update every 10 seconds
+                20000 // Update every 20 seconds (relaxed from 10s)
             );
 
             setBroadcastCleanup(() => cleanup);

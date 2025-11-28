@@ -129,7 +129,7 @@ class LocationService {
         intervalMs: number = 10000
     ): Promise<() => void> {
         let errorCount = 0;
-        const MAX_ERRORS = 3;
+        const MAX_ERRORS = 5; // Increased tolerance
 
         const updateLocation = async () => {
             try {

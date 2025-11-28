@@ -55,7 +55,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Get initial session
         supabase.auth.getSession().then(({ data: { session: supaSession } }) => {
             if (supaSession) {
-                setSession(mapSessionToAuthSession(supaSession));
+                const authSession = mapSessionToAuthSession(supaSession);
+                setSession(authSession);
+                // Self-healing: Ensure public profile exists and is up to date
+                syncProfileWithAuth(supaSession.user);
             }
             setAuthLoading(false);
         });
@@ -63,7 +66,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, supaSession) => {
             if (supaSession) {
-                setSession(mapSessionToAuthSession(supaSession));
+                const authSession = mapSessionToAuthSession(supaSession);
+                setSession(authSession);
+                // Self-healing: Ensure public profile exists and is up to date
+                syncProfileWithAuth(supaSession.user);
             } else {
                 setSession(null);
             }
@@ -71,6 +77,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         return () => subscription.unsubscribe();
     }, []);
+
+    // Helper to sync auth metadata to public profiles table
+    const syncProfileWithAuth = async (user: User) => {
+        try {
+            const profileData = {
+                id: user.id,
+                email: user.email,
+                name: user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario',
+                avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.avatarUrl || `https://ui-avatars.com/api/?name=${user.email}`,
+                updated_at: new Date().toISOString()
+            };
+
+            // Upsert to ensure it exists and is current
+            const { error } = await supabase
+                .from('profiles')
+                .upsert(profileData, { onConflict: 'id' });
+
+            if (error) {
+                console.error('Error syncing profile:', error);
+            }
+        } catch (err) {
+            console.error('Failed to sync profile:', err);
+        }
+    };
 
     const authMethods = {
         signIn: async (email: string, password: string) => {
