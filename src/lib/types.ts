@@ -76,4 +76,6 @@ export interface ChatConversation {
     lastTimestamp: number;
     unreadCount: number;
     messages: ChatMessage[];
+    mode?: string;
+    expiresAt?: number; // timestamp ms, null = permanent
 }

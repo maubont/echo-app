@@ -1,10 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, MessageCircle, MoreVertical, Phone, Send, Smile } from 'lucide-react';
+import { ArrowLeft, MessageCircle, MoreVertical, Phone, Send, Timer, Flame, Shield } from 'lucide-react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { ChatConversation } from '../../lib/types';
 import { chatService } from '../../services/chat';
+
+/** Format time remaining for ephemeral chats */
+const formatTimeRemaining = (expiresAt: number): string => {
+    const remaining = expiresAt - Date.now();
+    if (remaining <= 0) return 'Expirado';
+    const hours = Math.floor(remaining / (1000 * 60 * 60));
+    const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+};
 
 export const ChatPage = () => {
     const { session } = useAuth();
@@ -23,6 +33,15 @@ export const ChatPage = () => {
     const [inputText, setInputText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Tick for ephemeral countdown (update every minute)
+    const [, setTick] = useState(0);
+    useEffect(() => {
+        const hasEphemeral = conversations.some(c => c.expiresAt);
+        if (!hasEphemeral) return;
+        const interval = setInterval(() => setTick(t => t + 1), 60_000);
+        return () => clearInterval(interval);
+    }, [conversations]);
 
     // Auto scroll to bottom when new messages arrive
     const scrollToBottom = () => {
@@ -43,14 +62,21 @@ export const ChatPage = () => {
             // If navigating from map with target user, create/open conversation
             if (targetUserId) {
                 try {
-                    const conversationId = await chatService.getOrCreateConversation([
-                        session.user.id,
-                        targetUserId
-                    ]);
+                    const currentMode = session.user.currentMode || 'networking';
+                    const conversationId = await chatService.getOrCreateConversation(
+                        [session.user.id, targetUserId],
+                        currentMode
+                    );
                     setActiveChatId(conversationId);
 
                     // Load initial messages
                     const messages = await chatService.fetchMessages(conversationId);
+
+                    // Calculate expiry for adult mode
+                    const expiresAt = currentMode === 'adult'
+                        ? Date.now() + 24 * 60 * 60 * 1000
+                        : undefined;
+
                     const tempConv: ChatConversation = {
                         id: conversationId,
                         participantId: targetUserId,
@@ -64,7 +90,9 @@ export const ChatPage = () => {
                             senderId: m.senderId,
                             text: m.content,
                             timestamp: new Date(m.createdAt).getTime()
-                        }))
+                        })),
+                        mode: currentMode,
+                        expiresAt
                     };
                     setConversations([tempConv]);
                 } catch (error) {
@@ -86,11 +114,11 @@ export const ChatPage = () => {
 
     // Subscribe to real-time updates for the list
     useEffect(() => {
-        if (!session || activeChatId) return; // Don't play sound if already in chat (handled by other sub)
+        if (!session || activeChatId) return;
 
         const unsubscribe = chatService.subscribeToAllConversations(session.user.id, (newMessage) => {
             // Play notification sound
-            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3'); // Simple beep
+            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
             audio.play().catch(e => console.log('Audio play failed (user interaction needed):', e));
 
             // Update conversations list
@@ -98,7 +126,6 @@ export const ChatPage = () => {
                 const existingConv = prev.find(c => c.id === newMessage.conversation_id);
 
                 if (existingConv) {
-                    // Move to top and update
                     const updatedConv = {
                         ...existingConv,
                         lastMessage: newMessage.content,
@@ -107,8 +134,6 @@ export const ChatPage = () => {
                     };
                     return [updatedConv, ...prev.filter(c => c.id !== newMessage.conversation_id)];
                 } else {
-                    // New conversation? We might need to fetch it, but for now just ignore or reload
-                    // Ideally we fetch the new conversation details here
                     return prev;
                 }
             });
@@ -129,7 +154,6 @@ export const ChatPage = () => {
         setError(null);
 
         try {
-            // Send message to Supabase
             await chatService.sendMessage(activeChatId, messageText);
 
             // Optimistically update UI
@@ -152,14 +176,12 @@ export const ChatPage = () => {
         } catch (err: any) {
             console.error('Error sending message:', err);
             setError(`Error al enviar: ${err.message || 'Error desconocido'}`);
-            // Restore text if failed
             setInputText(messageText);
         }
     };
 
     const handleChatClick = async (chatId: string) => {
         setActiveChatId(chatId);
-        // Fetch full message history when opening a chat from list
         try {
             const messages = await chatService.fetchMessages(chatId);
             setConversations(prev => prev.map(c => {
@@ -182,6 +204,7 @@ export const ChatPage = () => {
     };
 
     const activeChat = conversations.find(c => c.id === activeChatId);
+    const isEphemeral = activeChat?.mode === 'adult' && !!activeChat?.expiresAt;
 
     // View: Chat List
     if (!activeChatId) {
@@ -189,6 +212,12 @@ export const ChatPage = () => {
             <div className="min-h-screen bg-theme-main pb-[90px] flex flex-col transition-colors duration-300">
                 <div className="p-6 pb-2">
                     <h1 className="text-2xl font-bold text-theme-primary">Mensajes</h1>
+                    {session?.user.currentMode === 'adult' && (
+                        <p className="text-xs text-red-400 flex items-center gap-1 mt-1">
+                            <Shield size={12} />
+                            Modo Adulto — Los chats expiran en 24h
+                        </p>
+                    )}
                 </div>
                 <div className="flex-1 overflow-y-auto px-4 space-y-2">
                     {conversations.length === 0 ? (
@@ -202,26 +231,43 @@ export const ChatPage = () => {
                             <div
                                 key={chat.id}
                                 onClick={() => handleChatClick(chat.id)}
-                                className="flex items-center gap-4 p-4 rounded-2xl hover:bg-theme-secondary/30 transition-all cursor-pointer border border-transparent hover:border-theme-secondary/10 active:scale-[0.99]"
+                                className={`flex items-center gap-4 p-4 rounded-2xl hover:bg-theme-secondary/30 transition-all cursor-pointer border border-transparent hover:border-theme-secondary/10 active:scale-[0.99] ${
+                                    chat.expiresAt && chat.expiresAt < Date.now() ? 'opacity-40 pointer-events-none' : ''
+                                }`}
                             >
                                 <div className="relative">
                                     <img
                                         src={chat.participantAvatar || `https://ui-avatars.com/api/?name=${chat.participantName}&background=random`}
-                                        className="w-12 h-12 rounded-full object-cover border-2 shadow-sm"
-                                        style={{ borderColor: 'rgb(var(--bg-card))' }}
+                                        className={`w-12 h-12 rounded-full object-cover border-2 shadow-sm ${
+                                            chat.mode === 'adult' ? 'border-red-400' : ''
+                                        }`}
+                                        style={chat.mode !== 'adult' ? { borderColor: 'rgb(var(--bg-card))' } : {}}
                                     />
                                     {chat.unreadCount > 0 && (
                                         <span className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full" style={{ boxShadow: '0 0 0 2px rgb(var(--bg-main))' }}>
                                             {chat.unreadCount}
                                         </span>
                                     )}
+                                    {chat.mode === 'adult' && (
+                                        <span className="absolute -bottom-1 -right-1 bg-red-500 text-white text-[8px] w-4 h-4 flex items-center justify-center rounded-full" style={{ boxShadow: '0 0 0 2px rgb(var(--bg-main))' }}>
+                                            <Flame size={8} />
+                                        </span>
+                                    )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-baseline mb-0.5">
                                         <h3 className="font-bold text-theme-primary truncate">{chat.participantName}</h3>
-                                        <span className="text-[10px] text-theme-tertiary">
-                                            {new Date(chat.lastTimestamp).getHours()}:{new Date(chat.lastTimestamp).getMinutes().toString().padStart(2, '0')}
-                                        </span>
+                                        <div className="flex items-center gap-1.5">
+                                            {chat.expiresAt && (
+                                                <span className="text-[9px] text-red-400 flex items-center gap-0.5 font-medium">
+                                                    <Timer size={9} />
+                                                    {formatTimeRemaining(chat.expiresAt)}
+                                                </span>
+                                            )}
+                                            <span className="text-[10px] text-theme-tertiary">
+                                                {new Date(chat.lastTimestamp).getHours()}:{new Date(chat.lastTimestamp).getMinutes().toString().padStart(2, '0')}
+                                            </span>
+                                        </div>
                                     </div>
                                     <p className={`text-sm truncate ${chat.unreadCount > 0 ? 'text-theme-primary font-semibold' : 'text-theme-secondary'}`}>
                                         {chat.lastMessage || 'Inicia la conversación'}
@@ -246,16 +292,29 @@ export const ChatPage = () => {
                 <div className="relative">
                     <img
                         src={activeChat?.participantAvatar || `https://ui-avatars.com/api/?name=${activeChat?.participantName}`}
-                        className="w-10 h-10 rounded-full object-cover border-2 shadow-theme-sm"
-                        style={{ borderColor: 'rgb(var(--primary-500))' }}
+                        className={`w-10 h-10 rounded-full object-cover border-2 shadow-theme-sm ${
+                            isEphemeral ? 'border-red-400' : ''
+                        }`}
+                        style={!isEphemeral ? { borderColor: 'rgb(var(--primary-500))' } : {}}
                     />
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-primary rounded-full" style={{ boxShadow: '0 0 0 2px rgb(var(--bg-card))' }}></span>
+                    {isEphemeral ? (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-red-500 rounded-full" style={{ boxShadow: '0 0 0 2px rgb(var(--bg-card))' }}></span>
+                    ) : (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-primary rounded-full" style={{ boxShadow: '0 0 0 2px rgb(var(--bg-card))' }}></span>
+                    )}
                 </div>
                 <div className="flex-1">
                     <h3 className="font-bold text-theme-primary text-sm">{activeChat?.participantName}</h3>
-                    <p className="text-xs text-theme-secondary font-medium flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span> En línea
-                    </p>
+                    {isEphemeral ? (
+                        <p className="text-xs text-red-400 font-medium flex items-center gap-1">
+                            <Timer size={10} />
+                            Expira en {formatTimeRemaining(activeChat!.expiresAt!)}
+                        </p>
+                    ) : (
+                        <p className="text-xs text-theme-secondary font-medium flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></span> En línea
+                        </p>
+                    )}
                 </div>
                 <button className="p-2 text-theme-secondary hover:bg-theme-secondary/20 rounded-full transition-colors">
                     <Phone size={20} />
@@ -265,6 +324,16 @@ export const ChatPage = () => {
                 </button>
             </div>
 
+            {/* Ephemeral Banner */}
+            {isEphemeral && (
+                <div className="bg-red-500/10 border-b border-red-500/20 px-4 py-2 flex items-center justify-center gap-2">
+                    <Shield size={12} className="text-red-400" />
+                    <span className="text-[11px] text-red-400 font-medium">
+                        Chat privado — se autodestruye en {formatTimeRemaining(activeChat!.expiresAt!)}
+                    </span>
+                </div>
+            )}
+
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32 transition-colors duration-300" style={{ background: 'rgb(var(--bg-secondary) / 0.3)' }}>
                 {/* Subtle Chat Pattern */}
@@ -272,12 +341,23 @@ export const ChatPage = () => {
 
                 {activeChat?.messages.length === 0 && (
                     <div className="flex flex-col items-center justify-center h-full text-center p-8 animate-in fade-in zoom-in duration-500">
-                        <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6 shadow-inner">
-                            <MessageCircle size={40} className="text-blue-500 opacity-80" />
+                        <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-inner ${
+                            isEphemeral ? 'bg-red-50' : 'bg-blue-50'
+                        }`}>
+                            {isEphemeral ? (
+                                <Flame size={40} className="text-red-400 opacity-80" />
+                            ) : (
+                                <MessageCircle size={40} className="text-blue-500 opacity-80" />
+                            )}
                         </div>
-                        <h3 className="text-lg font-bold text-slate-800 mb-2">Comienza la charla</h3>
-                        <p className="text-slate-500 text-sm max-w-[200px] leading-relaxed">
-                            Envía un mensaje para romper el hielo con <span className="font-bold text-blue-600">{activeChat.participantName}</span>.
+                        <h3 className="text-lg font-bold text-slate-800 mb-2">
+                            {isEphemeral ? 'Chat Privado' : 'Comienza la charla'}
+                        </h3>
+                        <p className="text-slate-500 text-sm max-w-[220px] leading-relaxed">
+                            {isEphemeral
+                                ? <>Este chat se autodestruirá en <span className="font-bold text-red-500">24 horas</span>. Sé discreto.</>
+                                : <>Envía un mensaje para romper el hielo con <span className="font-bold text-blue-600">{activeChat?.participantName}</span>.</>
+                            }
                         </p>
                     </div>
                 )}
@@ -286,7 +366,9 @@ export const ChatPage = () => {
                     return (
                         <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in-up`}>
                             <div className={`max-w-[75%] px-5 py-3 text-sm shadow-theme-md transition-all ${isMe
-                                ? 'bg-primary text-white rounded-2xl rounded-tr-sm'
+                                ? isEphemeral
+                                    ? 'bg-red-500 text-white rounded-2xl rounded-tr-sm'
+                                    : 'bg-primary text-white rounded-2xl rounded-tr-sm'
                                 : 'bg-theme-card/80 backdrop-blur-lg text-theme-primary border rounded-2xl rounded-tl-sm'
                                 }`}
                                 style={!isMe ? { borderColor: 'rgb(var(--glass-border))' } : {}}>
@@ -325,11 +407,13 @@ export const ChatPage = () => {
 
             {/* Input */}
             <div className="fixed bottom-24 left-0 right-0 p-4 z-60 pointer-events-none" style={{ background: 'linear-gradient(to top, transparent, rgb(var(--bg-main) / 0.5), transparent)' }}>
-                <div className="max-w-md mx-auto glass-effect rounded-full p-1.5 flex items-center gap-2 shadow-theme-xl pointer-events-auto transition-all duration-300">
+                <div className={`max-w-md mx-auto glass-effect rounded-full p-1.5 flex items-center gap-2 shadow-theme-xl pointer-events-auto transition-all duration-300 ${
+                    isEphemeral ? 'ring-1 ring-red-400/30' : ''
+                }`}>
                     <div className="pl-4 flex-1">
                         <input
                             className="w-full bg-transparent text-sm outline-none font-medium text-theme-primary placeholder-theme-tertiary"
-                            placeholder="Escribe un mensaje..."
+                            placeholder={isEphemeral ? "Mensaje privado..." : "Escribe un mensaje..."}
                             value={inputText}
                             onChange={e => setInputText(e.target.value)}
                             onKeyDown={e => e.key === 'Enter' && handleSend()}
@@ -338,7 +422,9 @@ export const ChatPage = () => {
                     <button
                         onClick={handleSend}
                         disabled={!inputText.trim()}
-                        className="bg-primary text-white p-3 rounded-full hover:shadow-theme-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95 shrink-0"
+                        className={`text-white p-3 rounded-full hover:shadow-theme-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95 shrink-0 ${
+                            isEphemeral ? 'bg-red-500' : 'bg-primary'
+                        }`}
                     >
                         <Send size={18} />
                     </button>

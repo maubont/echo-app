@@ -15,6 +15,8 @@ export interface Conversation {
     participantIds: string[];
     createdAt: string;
     updatedAt: string;
+    mode?: string;
+    expiresAt?: string;
 }
 
 class ChatService {
@@ -22,9 +24,13 @@ class ChatService {
 
     /**
      * Get or create a conversation between two users
+     * For adult mode, conversations expire in 24 hours
      */
-    async getOrCreateConversation(participantIds: string[]): Promise<string> {
-        // Try to find existing conversation
+    async getOrCreateConversation(
+        participantIds: string[],
+        mode: string = 'networking'
+    ): Promise<string> {
+        // Try to find existing conversation in the same mode
         const { data: existingParticipants } = await supabase
             .from('conversation_participants')
             .select('conversation_id')
@@ -37,19 +43,40 @@ class ChatService {
                 return acc;
             }, {} as Record<string, number>);
 
-            const existingConversation = Object.entries(conversationCounts).find(
-                ([_, count]) => count === participantIds.length
-            );
+            // Find conversations with exact participant match
+            const candidateIds = Object.entries(conversationCounts)
+                .filter(([_, count]) => count === participantIds.length)
+                .map(([id]) => id);
 
-            if (existingConversation) {
-                return existingConversation[0];
+            if (candidateIds.length > 0) {
+                // Check if any of these conversations match the mode and are not expired
+                const { data: matchingConvs } = await supabase
+                    .from('conversations')
+                    .select('id, mode, expires_at')
+                    .in('id', candidateIds)
+                    .eq('mode', mode);
+
+                const validConv = matchingConvs?.find(c => 
+                    !c.expires_at || new Date(c.expires_at) > new Date()
+                );
+
+                if (validConv) {
+                    return validConv.id;
+                }
             }
         }
 
-        // Create new conversation using RPC (Atomic operation to avoid RLS race conditions)
+        // Calculate expiry for adult mode
+        const expiresAt = mode === 'adult'
+            ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+            : null;
+
+        // Create new conversation using RPC
         const { data: conversationId, error: rpcError } = await supabase
             .rpc('create_new_conversation', {
-                participant_ids: participantIds
+                participant_ids: participantIds,
+                conv_mode: mode,
+                conv_expires_at: expiresAt
             });
 
         if (rpcError) {
@@ -212,7 +239,13 @@ class ChatService {
             return [];
         }
 
-        const enrichedConversations = await Promise.all(myConvs.map(async (conv: any) => {
+        // Filter out expired conversations
+        const validConvs = myConvs.filter((conv: any) => {
+            const expiresAt = conv.conversations?.expires_at;
+            return !expiresAt || new Date(expiresAt) > new Date();
+        });
+
+        const enrichedConversations = await Promise.all(validConvs.map(async (conv: any) => {
             const conversationId = conv.conversation_id;
 
             // 2. Get the OTHER participant
@@ -232,7 +265,7 @@ class ChatService {
                 .limit(1)
                 .single();
 
-            // If no other participant found (shouldn't happen in 1:1), use placeholder
+            // If no other participant found, use placeholder
             const otherUser = participants || {
                 user_id: 'unknown',
                 profiles: { name: 'Usuario', avatar_url: null }
@@ -248,8 +281,10 @@ class ChatService {
                 participantAvatar: profile?.avatar_url,
                 lastMessage: lastMsg?.content || '',
                 lastTimestamp: lastMsg ? new Date(lastMsg.created_at).getTime() : new Date(conv.conversations.created_at).getTime(),
-                unreadCount: 0, // TODO: Implement unread count
-                messages: [] // Not needed for list view
+                unreadCount: 0,
+                messages: [],
+                mode: conv.conversations?.mode || 'networking',
+                expiresAt: conv.conversations?.expires_at ? new Date(conv.conversations.expires_at).getTime() : undefined
             };
         }));
 
