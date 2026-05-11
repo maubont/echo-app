@@ -62,7 +62,7 @@ export const HomePage = () => {
 
             {/* Visibility Card */}
             <div className={`rounded-3xl p-6 shadow-theme-xl mb-6 overflow-hidden flex flex-col gap-4 relative transition-all duration-500 ${isVisible
-                ? 'bg-gradient-to-br from-primary/20 via-bg-card to-bg-card border-2'
+                ? 'bg-linear-to-br from-primary/20 via-bg-card to-bg-card border-2'
                 : 'bg-theme-card/50 border'
                 }`}
                 style={isVisible ? { borderColor: 'rgb(var(--primary-500) / 0.5)' } : { borderColor: 'rgb(var(--bg-secondary))' }}

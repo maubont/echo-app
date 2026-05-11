@@ -27,3 +27,10 @@ dist-ssr
 # Local env files
 .env
 .env.local
+
+# Database & Backups
+backup.gz
+*.sql
+pg.zip
+pgsql/
+unzip.js

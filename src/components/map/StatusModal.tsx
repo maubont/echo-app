@@ -54,7 +54,7 @@ export const StatusModal = ({ isOpen, onClose, onSave }: StatusModalProps) => {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/40 z-[100] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
+        <div className="fixed inset-0 bg-black/40 z-100 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in">
             <div className="glass-effect rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 border transition-all" style={{ borderColor: 'rgb(var(--glass-border))' }}>
                 {/* Header */}
                 <div className="p-4 border-b flex justify-between items-center" style={{ background: 'rgb(var(--bg-secondary) / 0.5)', borderColor: 'rgb(var(--glass-border))' }}>

@@ -324,7 +324,7 @@ export const ChatPage = () => {
             )}
 
             {/* Input */}
-            <div className="fixed bottom-24 left-0 right-0 p-4 z-[60] pointer-events-none" style={{ background: 'linear-gradient(to top, transparent, rgb(var(--bg-main) / 0.5), transparent)' }}>
+            <div className="fixed bottom-24 left-0 right-0 p-4 z-60 pointer-events-none" style={{ background: 'linear-gradient(to top, transparent, rgb(var(--bg-main) / 0.5), transparent)' }}>
                 <div className="max-w-md mx-auto glass-effect rounded-full p-1.5 flex items-center gap-2 shadow-theme-xl pointer-events-auto transition-all duration-300">
                     <div className="pl-4 flex-1">
                         <input
@@ -338,7 +338,7 @@ export const ChatPage = () => {
                     <button
                         onClick={handleSend}
                         disabled={!inputText.trim()}
-                        className="bg-primary text-white p-3 rounded-full hover:shadow-theme-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95 flex-shrink-0"
+                        className="bg-primary text-white p-3 rounded-full hover:shadow-theme-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-105 active:scale-95 shrink-0"
                     >
                         <Send size={18} />
                     </button>

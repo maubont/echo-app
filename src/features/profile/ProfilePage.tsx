@@ -176,7 +176,7 @@ export const ProfilePage = () => {
                             className={`p-3 rounded-xl border-2 transition-all ${currentTheme === 'aurora' ? 'shadow-theme-lg' : 'border-transparent opacity-60 hover:opacity-90'}`}
                             style={currentTheme === 'aurora' ? { borderColor: 'rgb(var(--primary-500))' } : {}}
                         >
-                            <div className="aspect-square rounded-lg mb-2 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-300"></div>
+                            <div className="aspect-square rounded-lg mb-2 bg-linear-to-br from-blue-400 via-purple-400 to-pink-300"></div>
                             <p className="text-xs font-bold text-theme-primary">Aurora</p>
                             <p className="text-[10px] text-theme-tertiary">Luminoso</p>
                         </button>
@@ -188,7 +188,7 @@ export const ProfilePage = () => {
                             className={`p-3 rounded-xl border-2 transition-all ${currentTheme === 'nebula' ? 'shadow-theme-lg' : 'border-transparent opacity-60 hover:opacity-90'}`}
                             style={currentTheme === 'nebula' ? { borderColor: 'rgb(var(--primary-500))' } : {}}
                         >
-                            <div className="aspect-square rounded-lg mb-2 bg-gradient-to-br from-indigo-600 via-purple-500 to-cyan-400"></div>
+                            <div className="aspect-square rounded-lg mb-2 bg-linear-to-br from-indigo-600 via-purple-500 to-cyan-400"></div>
                             <p className="text-xs font-bold text-theme-primary">Nebula</p>
                             <p className="text-[10px] text-theme-tertiary">Oscuro</p>
                         </button>
@@ -202,7 +202,7 @@ export const ProfilePage = () => {
                     <div className="space-y-3">
                         {/* Instagram */}
                         <div className="flex items-center gap-2">
-                            <div className="bg-gradient-to-br from-purple-600 to-pink-600 text-white p-2 rounded-lg">
+                            <div className="bg-linear-to-br from-purple-600 to-pink-600 text-white p-2 rounded-lg">
                                 <Instagram size={16} />
                             </div>
                             {isEditing ? (
@@ -272,7 +272,7 @@ export const ProfilePage = () => {
                             variant="primary"
                             fullWidth
                             onClick={installApp}
-                            className="bg-gradient-to-r from-blue-600 to-cyan-500 border-none shadow-lg"
+                            className="bg-linear-to-r from-blue-600 to-cyan-500 border-none shadow-lg"
                         />
                     )}
                     <Button label="Cerrar Sesión" variant="danger" fullWidth onClick={() => { signOut(); navigate('/login'); }} />

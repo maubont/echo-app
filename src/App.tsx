@@ -10,7 +10,7 @@ import { HomePage } from './features/home/HomePage';
 import { MapPage } from './features/map/MapPage';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { ChatPage } from './features/chat/ChatPage';
-
+import { ProtectedRoute } from './components/layout/ProtectedRoute';
 const App = () => {
     // Version Log for Deployment Verification
     console.log('🚀 Echo Pulse v1.2.0 - Loaded (Map Fixes + Profile Sync)');
@@ -33,10 +33,26 @@ const App = () => {
                                     <Route path="/login" element={<AuthScreen type="login" />} />
                                     <Route path="/signup" element={<AuthScreen type="signup" />} />
                                     <Route path="/permission" element={<PermissionPage />} />
-                                    <Route path="/home" element={<HomePage />} />
-                                    <Route path="/map" element={<MapPage />} />
-                                    <Route path="/profile" element={<ProfilePage />} />
-                                    <Route path="/chat" element={<ChatPage />} />
+                                    <Route path="/home" element={
+                                        <ProtectedRoute>
+                                            <HomePage />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="/map" element={
+                                        <ProtectedRoute>
+                                            <MapPage />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="/profile" element={
+                                        <ProtectedRoute>
+                                            <ProfilePage />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="/chat" element={
+                                        <ProtectedRoute>
+                                            <ChatPage />
+                                        </ProtectedRoute>
+                                    } />
                                 </Routes>
                                 <BottomNav />
                             </div>

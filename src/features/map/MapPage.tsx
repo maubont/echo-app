@@ -460,7 +460,7 @@ export const MapPage = () => {
             <div ref={containerRef} className="flex-1 z-0" />
 
             {/* Top Bar */}
-            <div className="absolute top-4 left-4 right-4 z-[400] flex gap-3 max-w-md mx-auto">
+            <div className="absolute top-4 left-4 right-4 z-400 flex gap-3 max-w-md mx-auto">
                 <div className="flex-1 glass rounded-2xl flex items-center p-1.5 transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-500/50 relative">
                     <form onSubmit={handleSearch} className="flex-1 flex items-center">
                         <input
@@ -487,7 +487,7 @@ export const MapPage = () => {
 
             {/* Filters Panel */}
             {showFilters && (
-                <div className="absolute top-20 left-4 right-4 z-[400] glass rounded-[24px] p-5 animate-in slide-in-from-top-4 duration-300 max-w-md mx-auto">
+                <div className="absolute top-20 left-4 right-4 z-400 glass rounded-[24px] p-5 animate-in slide-in-from-top-4 duration-300 max-w-md mx-auto">
                     <div className="mb-6">
                         <div className="flex justify-between items-center mb-3">
                             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Distancia Máxima</h3>
@@ -530,7 +530,7 @@ export const MapPage = () => {
 
             {/* Bottom Controls */}
             {!showStatusModal && (
-                <div className="absolute bottom-28 right-4 flex flex-col gap-4 z-[400]">
+                <div className="absolute bottom-28 right-4 flex flex-col gap-4 z-400">
                     <button
                         onClick={handleRecenter}
                         className="w-12 h-12 glass-effect rounded-full shadow-theme-lg flex items-center justify-center text-theme-primary hover:shadow-theme-xl transition-all active:scale-95"
