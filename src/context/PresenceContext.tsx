@@ -123,11 +123,16 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 broadcastCleanup();
             }
 
+            const currentMode = session.user.currentMode || 'networking';
+            const isGhost = session.user.modeProfiles?.[currentMode]?.isGhostMode || false;
+            
             // Start new broadcast
             const cleanup = await locationService.startBroadcasting(
                 session.user.id,
                 getCurrentLocation,
-                20000 // Update every 20 seconds (relaxed from 10s)
+                20000, // Update every 20 seconds (relaxed from 10s)
+                session.user.currentMode,
+                !isGhost // isVisible is true if NOT in ghost mode
             );
 
             setBroadcastCleanup(() => cleanup);

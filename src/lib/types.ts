@@ -1,5 +1,13 @@
 export type UserRole = 'person' | 'business';
-export type AppContextMode = 'networking' | 'social' | 'dating' | 'tourism' | 'business';
+export type AppContextMode = 'networking' | 'social' | 'discovery' | 'adult';
+
+export interface UserModeProfile {
+    mode: AppContextMode;
+    nickname: string;
+    bio?: string;
+    avatarUrl?: string;
+    isGhostMode: boolean;
+}
 
 export interface UserStatus {
     emoji: string;
@@ -21,6 +29,7 @@ export interface UserProfile {
     twitter?: string;
     linkedin?: string;
     status?: UserStatus;
+    modeProfiles?: Record<string, UserModeProfile>;
 }
 
 export interface AuthSession {

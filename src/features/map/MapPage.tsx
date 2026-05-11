@@ -13,7 +13,7 @@ import { useGeoLocation } from '../../hooks/useGeoLocation';
 import { Button } from '../../components/ui/Button';
 import { AppContextMode, MapEntity } from '../../lib/types';
 import { StatusModal } from '../../components/map/StatusModal';
-import { CATEGORY_OPTIONS, MODE_ICONS } from '../../lib/constants';
+import { CATEGORY_OPTIONS, MODE_ICONS, MODE_LABELS } from '../../lib/constants';
 import { PresenceService } from '../../services/presence';
 import { locationService } from '../../services/location';
 import { statusService } from '../../services/status';
@@ -123,7 +123,7 @@ export const MapPage = () => {
         setEntitiesLoading(true);
 
         // Subscribe to real-time location updates
-        const unsubscribeLocations = locationService.subscribeToNearbyLocations(async (locations) => {
+        const unsubscribeLocations = locationService.subscribeToNearbyLocations(session?.user.currentMode || 'networking', async (locations) => {
             // Fetch statuses for these users
             const statuses = await statusService.fetchActiveStatuses();
             const statusMap = new Map(statuses.map(s => [s.userId, s]));
@@ -135,12 +135,12 @@ export const MapPage = () => {
                     id: loc.id,
                     lat: loc.latitude,
                     lng: loc.longitude,
-                    type: 'person', // TODO: Get from profile
-                    mode: session?.user.currentMode || 'networking',
-                    categories: [], // TODO: Get from profile
-                    name: `Usuario ${loc.id.substring(0, 6)}`, // TODO: Get from profile
+                    type: 'person',
+                    mode: (loc.mode as AppContextMode) || session?.user.currentMode || 'networking',
+                    categories: [],
+                    name: loc.name || `Usuario ${loc.id.substring(0, 6)}`,
                     description: 'Disponible para conectar.',
-                    avatarUrl: `https://ui-avatars.com/api/?name=User`,
+                    avatarUrl: loc.avatarUrl || `https://ui-avatars.com/api/?name=${loc.name || 'User'}&background=random`,
                     lastSeen: new Date(loc.updatedAt).getTime(),
                     status: status ? {
                         emoji: status.emoji,
@@ -158,7 +158,7 @@ export const MapPage = () => {
         // Subscribe to real-time status updates
         const unsubscribeStatuses = statusService.subscribeToStatuses(async () => {
             // Refresh locations to get updated statuses
-            const locations = await locationService.fetchNearbyLocations(maxDistance);
+            const locations = await locationService.fetchNearbyLocations(maxDistance, session?.user.currentMode || 'networking');
             const statuses = await statusService.fetchActiveStatuses();
             const statusMap = new Map(statuses.map(s => [s.userId, s]));
 
@@ -476,6 +476,18 @@ export const MapPage = () => {
                             {entities.length} cerca
                         </span>
                     )}
+                </div>
+                {/* Mode badge */}
+                <div
+                    className={`h-12 px-3 rounded-2xl flex items-center gap-1.5 text-xs font-bold shadow-md ${
+                        session?.user.currentMode === 'adult'
+                            ? 'bg-red-600 text-white'
+                            : 'glass text-theme-primary'
+                    }`}
+                    title={`Modo: ${MODE_LABELS[session?.user.currentMode as AppContextMode] || session?.user.currentMode}`}
+                >
+                    {MODE_ICONS[session?.user.currentMode as AppContextMode]}
+                    <span className="hidden sm:inline">{MODE_LABELS[session?.user.currentMode as AppContextMode]}</span>
                 </div>
                 <button
                     onClick={() => setShowFilters(!showFilters)}

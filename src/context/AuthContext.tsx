@@ -17,6 +17,7 @@ interface AuthContextType {
     signUp: (email: string, name: string, role: UserRole, password: string) => Promise<void>;
     signOut: () => Promise<void>;
     updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
+    updateModeProfile: (mode: string, updates: Partial<any>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>(null!);
@@ -56,9 +57,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         supabase.auth.getSession().then(({ data: { session: supaSession } }) => {
             if (supaSession) {
                 const authSession = mapSessionToAuthSession(supaSession);
-                setSession(authSession);
+                
+                // Fetch mode profiles
+                supabase.from('user_mode_profiles').select('*').eq('user_id', supaSession.user.id)
+                .then(({ data: modeProfiles }) => {
+                    if (modeProfiles && modeProfiles.length > 0) {
+                        const profilesMap = modeProfiles.reduce((acc, p) => {
+                            acc[p.mode] = {
+                                mode: p.mode,
+                                nickname: p.nickname,
+                                bio: p.bio,
+                                avatarUrl: p.avatar_url,
+                                isGhostMode: p.is_ghost_mode
+                            };
+                            return acc;
+                        }, {} as any);
+                        authSession.user.modeProfiles = profilesMap;
+                    }
+                    setSession(authSession);
+                });
+
                 // Self-healing: Ensure public profile exists and is up to date
                 syncProfileWithAuth(supaSession.user);
+            } else {
+                setSession(null);
             }
             setAuthLoading(false);
         });
@@ -67,7 +89,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, supaSession) => {
             if (supaSession) {
                 const authSession = mapSessionToAuthSession(supaSession);
-                setSession(authSession);
+                
+                // Fetch mode profiles
+                supabase.from('user_mode_profiles').select('*').eq('user_id', supaSession.user.id)
+                .then(({ data: modeProfiles }) => {
+                    if (modeProfiles && modeProfiles.length > 0) {
+                        const profilesMap = modeProfiles.reduce((acc, p) => {
+                            acc[p.mode] = {
+                                mode: p.mode,
+                                nickname: p.nickname,
+                                bio: p.bio,
+                                avatarUrl: p.avatar_url,
+                                isGhostMode: p.is_ghost_mode
+                            };
+                            return acc;
+                        }, {} as any);
+                        authSession.user.modeProfiles = profilesMap;
+                    }
+                    setSession(authSession);
+                });
+
                 // Self-healing: Ensure public profile exists and is up to date
                 syncProfileWithAuth(supaSession.user);
             } else {
@@ -202,6 +243,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     user: mapUserToProfile(data.user)
                 });
             }
+        },
+
+        updateModeProfile: async (mode: string, updates: any) => {
+            if (!session?.user?.id) return;
+            
+            const payload: any = {
+                user_id: session.user.id,
+                mode,
+                updated_at: new Date().toISOString()
+            };
+            
+            if (updates.nickname !== undefined) payload.nickname = updates.nickname;
+            if (updates.bio !== undefined) payload.bio = updates.bio;
+            if (updates.avatarUrl !== undefined) payload.avatar_url = updates.avatarUrl;
+            if (updates.isGhostMode !== undefined) payload.is_ghost_mode = updates.isGhostMode;
+
+            const { error } = await supabase
+                .from('user_mode_profiles')
+                .upsert(payload, { onConflict: 'user_id, mode' });
+
+            if (error) {
+                console.error('Error updating mode profile:', error);
+                throw error;
+            }
+
+            // Refetch or update session locally
+            const modeProfiles = session.user.modeProfiles || {};
+            setSession({
+                ...session,
+                user: {
+                    ...session.user,
+                    modeProfiles: {
+                        ...modeProfiles,
+                        [mode]: {
+                            ...(modeProfiles[mode] || { mode, nickname: session.user.name, isGhostMode: false }),
+                            ...updates
+                        }
+                    }
+                }
+            });
         }
     };
 

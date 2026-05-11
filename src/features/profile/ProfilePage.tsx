@@ -1,36 +1,79 @@
-import { useState, useContext } from 'react';
-import { Camera, Check, Filter, Instagram, Twitter, Linkedin } from 'lucide-react';
+import { useState } from 'react';
+import { Camera, Check, Filter, Instagram, Twitter, Linkedin, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Button } from '../../components/ui/Button';
 import { AppContextMode } from '../../lib/types';
-import { CATEGORY_OPTIONS, MODE_ICONS } from '../../lib/constants';
+import { CATEGORY_OPTIONS, MODE_ICONS, MODE_LABELS, MODE_DESCRIPTIONS } from '../../lib/constants';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
 
 export const ProfilePage = () => {
-    const { session, updateProfile, signOut } = useAuth();
+    const { session, updateProfile, updateModeProfile, signOut } = useAuth();
     const { theme: currentTheme, setTheme } = useTheme();
     const navigate = useNavigate();
     const { isInstallable, installApp } = usePWAInstall();
 
     const [isEditing, setIsEditing] = useState(false);
+    
+    // Get initial values prioritizing mode-specific data
+    const initialMode = session?.user.currentMode || 'networking';
+    const currentModeProfile = session?.user.modeProfiles?.[initialMode];
+    
     const [form, setForm] = useState({
-        name: session?.user.name || '',
-        bio: session?.user.bio || '',
-        currentMode: session?.user.currentMode || 'networking',
+        name: currentModeProfile?.nickname || session?.user.name || '',
+        bio: currentModeProfile?.bio || session?.user.bio || '',
+        currentMode: initialMode,
         categories: session?.user.categories || [],
-        avatarUrl: session?.user.avatarUrl || '',
+        avatarUrl: currentModeProfile?.avatarUrl || session?.user.avatarUrl || '',
+        isGhostMode: currentModeProfile?.isGhostMode || false,
         instagram: session?.user.instagram || '',
         twitter: session?.user.twitter || '',
         linkedin: session?.user.linkedin || ''
     });
 
-    const modes: AppContextMode[] = ['networking', 'social', 'dating', 'tourism'];
+    const modes: AppContextMode[] = ['networking', 'social', 'discovery', 'adult'];
+
+    const [isSaving, setIsSaving] = useState(false);
 
     const handleSave = async () => {
-        await updateProfile(form);
+        setIsSaving(true);
+        try {
+            // Save global profile
+            await updateProfile({
+                currentMode: form.currentMode,
+                categories: form.categories,
+                instagram: form.instagram,
+                twitter: form.twitter,
+                linkedin: form.linkedin,
+                // also update global name/bio if networking mode
+                ...(form.currentMode === 'networking' ? { name: form.name, bio: form.bio, avatarUrl: form.avatarUrl } : {})
+            });
+
+            // Save mode-specific profile
+            await updateModeProfile(form.currentMode, {
+                nickname: form.name,
+                bio: form.bio,
+                avatarUrl: form.avatarUrl,
+                isGhostMode: form.isGhostMode
+            });
+        } finally {
+            setIsSaving(false);
+        }
         setIsEditing(false);
+    };
+
+    const handleModeSwitch = (m: AppContextMode) => {
+        const modeProfile = session?.user.modeProfiles?.[m];
+        setForm({
+            ...form,
+            currentMode: m,
+            name: modeProfile?.nickname || session?.user.name || '',
+            bio: modeProfile?.bio || session?.user.bio || '',
+            avatarUrl: modeProfile?.avatarUrl || session?.user.avatarUrl || '',
+            isGhostMode: modeProfile?.isGhostMode || false,
+            categories: session?.user.currentMode === m ? session?.user.categories : []
+        });
     };
 
     const toggleCategory = (cat: string) => {
@@ -54,10 +97,11 @@ export const ProfilePage = () => {
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-xl font-bold text-theme-primary">Mi Perfil</h1>
                     <Button
-                        label={isEditing ? 'Guardar' : 'Editar'}
+                        label={isSaving ? 'Guardando...' : isEditing ? 'Guardar' : 'Editar'}
                         onClick={() => isEditing ? handleSave() : setIsEditing(true)}
                         variant="premium"
                         size="xs"
+                        disabled={isSaving}
                     />
                 </div>
 
@@ -84,9 +128,18 @@ export const ProfilePage = () => {
                             placeholder="Tu Nombre"
                         />
                     ) : (
-                        <h2 className="text-xl font-bold text-theme-primary">{session?.user.name}</h2>
+                        <h2 className="text-xl font-bold text-theme-primary">
+                            {session?.user.modeProfiles?.[form.currentMode]?.nickname || session?.user.name}
+                        </h2>
                     )}
                     <p className="text-sm text-theme-secondary">{session?.user.email}</p>
+                    {!isEditing && (
+                        <span className={`mt-1 text-xs font-bold px-2 py-0.5 rounded-full ${
+                            form.currentMode === 'adult' ? 'bg-red-100 text-red-600' : 'bg-primary/10'
+                        }`} style={form.currentMode !== 'adult' ? { color: 'rgb(var(--primary-500))' } : {}}>
+                            {MODE_LABELS[form.currentMode as AppContextMode] || form.currentMode}
+                        </span>
+                    )}
                 </div>
             </div>
 
@@ -101,23 +154,48 @@ export const ProfilePage = () => {
                             <button
                                 key={m}
                                 disabled={!isEditing}
-                                onClick={() => setForm({ ...form, currentMode: m, categories: [] })}
-                                className={`px-3 py-2 rounded-xl text-xs font-bold capitalize border transition-all flex items-center gap-1.5 ${form.currentMode === m
-                                    ? 'bg-primary text-white shadow-theme-md'
-                                    : 'bg-theme-secondary/30 text-theme-secondary hover:bg-theme-secondary/50'
-                                    } ${!isEditing && form.currentMode !== m ? 'opacity-50' : ''}`}
-                                style={form.currentMode === m ? {} : { borderColor: 'rgb(var(--glass-border))' }}
+                                onClick={() => handleModeSwitch(m)}
+                                className={`px-3 py-2 rounded-xl text-xs font-bold capitalize border transition-all flex items-center gap-1.5 ${
+                                    form.currentMode === m
+                                        ? m === 'adult' ? 'bg-red-500 text-white shadow-theme-md border-red-400' : 'bg-primary text-white shadow-theme-md'
+                                        : 'bg-theme-secondary/30 text-theme-secondary hover:bg-theme-secondary/50'
+                                } ${!isEditing && form.currentMode !== m ? 'opacity-40' : ''}`}
+                                style={form.currentMode === m && m !== 'adult' ? {} : { borderColor: 'rgb(var(--glass-border))' }}
                             >
-                                {MODE_ICONS[m]}
-                                {m}
+                                {MODE_ICONS[m] || <Filter size={14} />}
+                                {MODE_LABELS[m] || m}
                             </button>
                         ))}
                     </div>
+                    {/* Mode description */}
+                    <p className="text-[11px] text-theme-tertiary mt-3 italic">
+                        {MODE_DESCRIPTIONS[form.currentMode as AppContextMode]}
+                    </p>
                 </div>
+
+                {/* GHOST MODE TOGGLE (ONLY ADULT/DISCOVERY) */}
+                {(form.currentMode === 'adult' || form.currentMode === 'discovery') && (
+                    <div className="bg-theme-card/80 backdrop-blur-lg p-4 rounded-2xl shadow-theme-sm border transition-all duration-300 flex items-center justify-between" style={{ borderColor: 'rgb(var(--glass-border))' }}>
+                        <div>
+                            <h3 className="text-xs font-bold text-theme-tertiary uppercase mb-1">Ghost Mode</h3>
+                            <p className="text-[10px] text-theme-secondary">Oculta tu perfil del mapa público.</p>
+                        </div>
+                        <button
+                            disabled={!isEditing}
+                            onClick={() => setForm({ ...form, isGhostMode: !form.isGhostMode })}
+                            className={`w-12 h-6 rounded-full p-1 transition-colors ${form.isGhostMode ? 'bg-primary' : 'bg-theme-secondary/50'}`}
+                            style={form.isGhostMode ? { backgroundColor: 'rgb(var(--primary-500))' } : {}}
+                        >
+                            <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform ${form.isGhostMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                        </button>
+                    </div>
+                )}
 
                 {/* BIO */}
                 <div className="bg-theme-card/80 backdrop-blur-lg p-4 rounded-2xl shadow-theme-sm border transition-all duration-300" style={{ borderColor: 'rgb(var(--glass-border))' }}>
-                    <h3 className="text-xs font-bold text-theme-tertiary uppercase mb-2">Bio</h3>
+                    <h3 className="text-xs font-bold text-theme-tertiary uppercase mb-2">
+                        Bio {form.currentMode !== 'networking' && `(${MODE_LABELS[form.currentMode as AppContextMode]})`}
+                    </h3>
                     {isEditing ? (
                         <textarea
                             className="w-full bg-theme-secondary border rounded-xl p-3 text-sm min-h-[80px] text-theme-primary placeholder-theme-tertiary"
@@ -127,7 +205,7 @@ export const ProfilePage = () => {
                         />
                     ) : (
                         <p className="text-sm text-theme-secondary leading-relaxed">
-                            {session?.user.bio || "Sin descripción."}
+                            {session?.user.modeProfiles?.[form.currentMode]?.bio || session?.user.bio || 'Sin descripción.'}
                         </p>
                     )}
                 </div>
@@ -140,7 +218,7 @@ export const ProfilePage = () => {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                        {CATEGORY_OPTIONS[form.currentMode].map(cat => {
+                        {(CATEGORY_OPTIONS[form.currentMode] || []).map(cat => {
                             const isSelected = form.categories.includes(cat);
                             return (
                                 <button
@@ -158,7 +236,7 @@ export const ProfilePage = () => {
                                 </button>
                             );
                         })}
-                        {CATEGORY_OPTIONS[form.currentMode].length === 0 && (
+                        {(!CATEGORY_OPTIONS[form.currentMode] || CATEGORY_OPTIONS[form.currentMode].length === 0) && (
                             <span className="text-xs text-theme-tertiary italic">No hay categorías disponibles para este modo.</span>
                         )}
                     </div>

@@ -29,6 +29,7 @@ class LocationService {
      * Subscribe to nearby users' location updates
      */
     subscribeToNearbyLocations(
+        currentMode: string,
         callback: (locations: NearbyUser[]) => void
     ): () => void {
         // Subscribe to real-time location updates
@@ -43,14 +44,14 @@ class LocationService {
                 },
                 async () => {
                     // Fetch updated locations when changes occur
-                    const locations = await this.fetchNearbyLocations();
+                    const locations = await this.fetchNearbyLocations(5000, currentMode);
                     callback(locations);
                 }
             )
             .subscribe();
 
         // Initial fetch
-        this.fetchNearbyLocations().then(callback);
+        this.fetchNearbyLocations(5000, currentMode).then(callback);
 
         // Cleanup function
         return () => {
@@ -65,7 +66,8 @@ class LocationService {
      * Fetch nearby users' locations with profile data
      */
     async fetchNearbyLocations(
-        maxDistance: number = 5000 // meters
+        maxDistance: number = 5000, // meters
+        currentMode: string = 'networking'
     ): Promise<NearbyUser[]> {
         // 1. Get locations
         const { data: locations, error: locError } = await supabase
@@ -82,29 +84,39 @@ class LocationService {
 
         // 2. Get profiles for these users
         const userIds = locations.map(l => l.user_id);
-        const { data: profiles, error: profError } = await supabase
-            .from('profiles')
-            .select('id, name, avatar_url, current_mode')
-            .in('id', userIds);
+        
+        let profileMap = new Map();
+        
+        // Try to get mode specific profiles first
+        const { data: modeProfiles, error: modeProfError } = await supabase
+            .from('user_mode_profiles')
+            .select('user_id, nickname, avatar_url, mode')
+            .in('user_id', userIds)
+            .eq('mode', currentMode);
+            
+        if (!modeProfError && modeProfiles) {
+            modeProfiles.forEach(p => {
+                profileMap.set(p.user_id, { name: p.nickname, avatar_url: p.avatar_url, current_mode: p.mode });
+            });
+        }
+        
+        // Find missing profiles
+        const missingUserIds = userIds.filter(id => !profileMap.has(id));
+        
+        if (missingUserIds.length > 0) {
+            const { data: profiles, error: profError } = await supabase
+                .from('profiles')
+                .select('id, name, avatar_url, current_mode')
+                .in('id', missingUserIds);
 
-        if (profError) {
-            console.error('Error fetching profiles:', profError);
-            // Fallback to locations without profile data if profile fetch fails
-            return locations.map(loc => ({
-                id: loc.user_id,
-                latitude: loc.latitude,
-                longitude: loc.longitude,
-                isVisible: loc.is_visible,
-                updatedAt: loc.updated_at,
-                name: 'Usuario',
-                avatarUrl: null,
-                mode: 'networking'
-            }));
+            if (!profError && profiles) {
+                profiles.forEach(p => {
+                    profileMap.set(p.id, p);
+                });
+            }
         }
 
         // 3. Merge data
-        const profileMap = new Map(profiles?.map(p => [p.id, p]));
-
         return locations.map((loc) => {
             const profile = profileMap.get(loc.user_id);
             return {
@@ -126,7 +138,9 @@ class LocationService {
     async startBroadcasting(
         userId: string,
         getCurrentLocation: () => Promise<GeolocationPosition>,
-        intervalMs: number = 10000
+        intervalMs: number = 10000,
+        mode: string = 'networking',
+        isVisible: boolean = true
     ): Promise<() => void> {
         let errorCount = 0;
         const MAX_ERRORS = 5; // Increased tolerance
@@ -134,13 +148,29 @@ class LocationService {
         const updateLocation = async () => {
             try {
                 const position = await getCurrentLocation();
+                
+                let lat = position.coords.latitude;
+                let lng = position.coords.longitude;
+                
+                if (mode === 'adult') {
+                    // Jitter ~1km for privacy
+                    const r = 1000 / 111300;
+                    const u = Math.random();
+                    const v = Math.random();
+                    const w = r * Math.sqrt(u);
+                    const t = 2 * Math.PI * v;
+                    const x = w * Math.cos(t);
+                    const y = w * Math.sin(t);
+                    lat = lat + x;
+                    lng = lng + (y / Math.cos(lat * (Math.PI / 180)));
+                }
 
                 await this.updateOwnLocation({
                     userId: userId,
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
+                    latitude: lat,
+                    longitude: lng,
                     accuracy: position.coords.accuracy,
-                    isVisible: true,
+                    isVisible: isVisible,
                 });
 
                 // Reset error count on success
