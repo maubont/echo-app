@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Button } from '../../components/ui/Button';
+import { AgeVerificationModal } from '../../components/ui/AgeVerificationModal';
 import { AppContextMode } from '../../lib/types';
 import { CATEGORY_OPTIONS, MODE_ICONS, MODE_LABELS, MODE_DESCRIPTIONS } from '../../lib/constants';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
@@ -35,6 +36,11 @@ export const ProfilePage = () => {
     const modes: AppContextMode[] = ['networking', 'social', 'discovery', 'adult'];
 
     const [isSaving, setIsSaving] = useState(false);
+    const [showAgeModal, setShowAgeModal] = useState(false);
+    const [pendingAdultSwitch, setPendingAdultSwitch] = useState(false);
+
+    // Check if user already verified age for adult mode
+    const isAgeVerified = session?.user.modeProfiles?.['adult']?.nickname ? true : false;
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -64,6 +70,16 @@ export const ProfilePage = () => {
     };
 
     const handleModeSwitch = (m: AppContextMode) => {
+        // Gate: require age verification for adult mode
+        if (m === 'adult' && !isAgeVerified) {
+            setPendingAdultSwitch(true);
+            setShowAgeModal(true);
+            return;
+        }
+        doModeSwitch(m);
+    };
+
+    const doModeSwitch = (m: AppContextMode) => {
         const modeProfile = session?.user.modeProfiles?.[m];
         setForm({
             ...form,
@@ -74,6 +90,17 @@ export const ProfilePage = () => {
             isGhostMode: modeProfile?.isGhostMode || false,
             categories: session?.user.currentMode === m ? session?.user.categories : []
         });
+    };
+
+    const handleAgeConfirmed = async () => {
+        setShowAgeModal(false);
+        // Save initial adult mode profile (marks as verified)
+        await updateModeProfile('adult', {
+            nickname: session?.user.name || 'Anónimo',
+            bio: '',
+            isGhostMode: true, // default ghost mode ON for adult
+        });
+        doModeSwitch('adult');
     };
 
     const toggleCategory = (cat: string) => {
@@ -93,6 +120,12 @@ export const ProfilePage = () => {
 
     return (
         <div className="h-screen bg-theme-main pb-[90px] overflow-y-auto transition-colors duration-300">
+            {/* Age Verification Modal */}
+            <AgeVerificationModal
+                isOpen={showAgeModal}
+                onConfirm={handleAgeConfirmed}
+                onCancel={() => { setShowAgeModal(false); setPendingAdultSwitch(false); }}
+            />
             <div className="bg-theme-card/90 backdrop-blur-xl p-6 rounded-b-3xl shadow-theme-md mb-4 border-b transition-all duration-300" style={{ borderColor: 'rgb(var(--glass-border))' }}>
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-xl font-bold text-theme-primary">Mi Perfil</h1>

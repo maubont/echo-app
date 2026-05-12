@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, MessageCircle, MoreVertical, Phone, Send, Timer, Flame, Shield } from 'lucide-react';
+import { ArrowLeft, MessageCircle, MoreVertical, Phone, Send, Timer, Flame, Shield, Flag } from 'lucide-react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { ChatConversation } from '../../lib/types';
 import { chatService } from '../../services/chat';
+import { ReportModal } from '../../components/ui/ReportModal';
 
 /** Format time remaining for ephemeral chats */
 const formatTimeRemaining = (expiresAt: number): string => {
@@ -32,6 +33,7 @@ export const ChatPage = () => {
     const [conversations, setConversations] = useState<ChatConversation[]>([]);
     const [inputText, setInputText] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [showReportModal, setShowReportModal] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Tick for ephemeral countdown (update every minute)
@@ -319,10 +321,23 @@ export const ChatPage = () => {
                 <button className="p-2 text-theme-secondary hover:bg-theme-secondary/20 rounded-full transition-colors">
                     <Phone size={20} />
                 </button>
-                <button className="p-2 text-theme-secondary hover:bg-theme-secondary/20 rounded-full transition-colors">
-                    <MoreVertical size={20} />
+                <button onClick={() => setShowReportModal(true)} className="p-2 text-theme-secondary hover:bg-theme-secondary/20 rounded-full transition-colors text-red-400 hover:text-red-500 hover:bg-red-50">
+                    <Flag size={20} />
                 </button>
             </div>
+
+            {/* Report Modal */}
+            <ReportModal
+                isOpen={showReportModal}
+                reportedUserId={activeChat!.participantId}
+                reportedUserName={activeChat!.participantName}
+                reporterId={session!.user.id}
+                onClose={() => setShowReportModal(false)}
+                onBlock={() => {
+                    // Logic to hide chat if user is blocked
+                    setActiveChatId(null);
+                }}
+            />
 
             {/* Ephemeral Banner */}
             {isEphemeral && (
