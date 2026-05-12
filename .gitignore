@@ -7,10 +7,12 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build output
 dist
 dist-ssr
-
 
 # Editor directories and files
 .vscode/*
@@ -24,13 +26,13 @@ dist-ssr
 *.sln
 *.sw?
 
-# Local env files
+# Local env files (contain secrets)
 .env
 .env.local
 
-# Database & Backups
+# Database backups & dumps (not migration scripts)
 backup.gz
-*.sql
+database.sql
 pg.zip
 pgsql/
 unzip.js
