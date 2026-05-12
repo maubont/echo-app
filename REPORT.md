@@ -1,42 +1,62 @@
-# Echo - Refactoring Report
+# Echo — Architecture Report
 
-## Resumen
-Se ha completado la refactorización de la aplicación **Echo**, migrando de un archivo monolítico `index.tsx` a una arquitectura modular profesional basada en **Vite + React + TypeScript**. Se ha implementado **Tailwind CSS v4** y **React Router DOM** para la navegación.
+> **Última actualización**: 2026-05-11 (v0.3.0)
 
-## Cambios Realizados
+## Arquitectura
 
-### 1. Arquitectura y Estructura de Carpetas
-Se ha dividido el código en la siguiente estructura:
+Echo sigue una arquitectura **Feature-First** con React + TypeScript + Vite:
 
-- **`src/components/ui`**: Componentes base reutilizables (`Button`, `Input`).
-- **`src/components/layout`**: Componentes de estructura (`BottomNav`).
-- **`src/features/auth`**: Pantallas de autenticación (`AuthScreen`, `PermissionPage`).
-- **`src/features/home`**: Pantalla principal (`HomePage`).
-- **`src/features/map`**: Lógica del mapa (`MapPage`).
-- **`src/features/chat`**: Lógica de mensajería (`ChatPage`).
-- **`src/features/profile`**: Perfil de usuario (`ProfilePage`).
-- **`src/features/splash`**: Pantalla de carga (`Splash`).
-- **`src/context`**: Gestión de estado global (`AuthContext`, `PresenceContext`).
-- **`src/hooks`**: Hooks personalizados (`useGeoLocation`).
-- **`src/lib`**: Constantes y tipos (`constants.tsx`, `types.ts`).
-- **`src/services`**: Capa de servicios (`api.ts`, `presence.ts`).
+```
+src/
+├── components/       → UI reutilizable (Button, Input, BottomNav, StatusModal)
+├── context/          → Estado global (Auth, Presence, Theme)
+├── features/         → Páginas principales (auth, chat, home, map, profile, splash)
+├── hooks/            → Custom hooks (useGeoLocation, usePWAInstall)
+├── lib/              → Tipos, constantes, cliente Supabase
+├── services/         → Capa de datos (chat, location, presence, status)
+└── styles/           → CSS global y temas
+```
 
-### 2. Librerías Instaladas
-Se han instalado y configurado las siguientes dependencias:
+## Stack
 
-- **Core**: `react-router-dom` (Navegación).
-- **Estilos**: `tailwindcss`, `@tailwindcss/postcss`, `clsx`, `tailwind-merge`.
-- **Mapas**: `leaflet`, `leaflet.markercluster`.
-- **Iconos**: `lucide-react`.
-- **Dev**: `typescript`, `vite`, `postcss`, `autoprefixer`.
+| Capa | Tecnología | Versión |
+|------|-----------|---------|
+| Framework | React | 19.2 |
+| Build | Vite | 6.4 |
+| Lenguaje | TypeScript | 5.x |
+| Estilos | TailwindCSS | 4.x |
+| Mapas | Leaflet + MarkerCluster | 1.9 |
+| Iconos | Lucide React | 0.554 |
+| Routing | React Router DOM | 7.9 |
+| Backend | Supabase (Auth, DB, Realtime) | 2.84 |
+| Despliegue | Netlify | — |
 
-### 3. Mejoras Técnicas
-- **Routing**: Se reemplazó el `RouterContext` manual por `React Router DOM` (`BrowserRouter`, `Routes`, `useNavigate`).
-- **Mapas**: Se configuró Leaflet para cargar CSS y JS desde módulos NPM, eliminando la dependencia de CDNs. Se implementó `MarkerCluster` correctamente.
-- **Tailwind v4**: Se actualizó a la última versión de Tailwind CSS usando la configuración moderna con PostCSS.
-- **API Mock**: Se extrajo la lógica de "Supabase" a un servicio dedicado para facilitar la integración real en el futuro.
+## Decisiones de Diseño
 
-## Verificación
-- **Build**: El proyecto compila correctamente con `npm run build`.
-- **Dev Server**: El servidor de desarrollo corre en `http://localhost:3000/`.
-- **Flujo de Usuario**: Se verificó la navegación desde el Splash -> Login -> Permisos -> Home -> Mapa -> Chat.
+### Multi-Modo
+- 4 modos: `networking`, `social`, `discovery`, `adult`
+- Cada modo tiene perfil independiente en tabla `user_mode_profiles` (nickname, bio, avatar, ghost)
+- El `current_mode` en `profiles` determina qué modo está activo
+- RLS en Supabase aísla datos por modo
+
+### Privacidad (Modo Adulto)
+- **Coordinate jittering**: ~1km de desplazamiento aleatorio en `location.ts`
+- **Ghost Mode**: invisibilidad en mapa vía `PresenceContext`
+- **RLS estricto**: `user_locations` y `profiles` filtran por modo
+- **Chat efímero**: 24h TTL en `conversations.expires_at`
+
+### Chat
+- Creación atómica vía RPC `create_new_conversation` (evita race conditions)
+- Helper `is_chat_participant()` (evita recursión RLS)
+- Mensajes bloqueados si la conversación expiró
+- Realtime vía Supabase channels
+
+### Migraciones SQL
+- **Desde cero**: Ejecutar `migrations/001_consolidated_schema.sql`
+- **Incremental**: Los archivos individuales en la raíz documentan la historia de cambios
+
+## Historial de Refactorizaciones
+
+1. **v0.1.0** — Migración de monolito `index.tsx` → arquitectura modular
+2. **v0.2.0** — Integración Supabase real (Auth, Realtime, RLS), chat en tiempo real
+3. **v0.3.0** — Multi-modo, modo adulto, chat efímero, privacidad avanzada
