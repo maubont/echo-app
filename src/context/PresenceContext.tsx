@@ -114,7 +114,7 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         });
     };
 
-    const startLocationBroadcast = async () => {
+    const startLocationBroadcast = async (forceVisibility?: boolean) => {
         if (!session?.user?.id) return;
 
         try {
@@ -125,6 +125,7 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
             const currentMode = session.user.currentMode || 'networking';
             const isGhost = session.user.modeProfiles?.[currentMode]?.isGhostMode || false;
+            const visibilityToSet = forceVisibility !== undefined ? forceVisibility : !isGhost;
             
             // Start new broadcast
             const cleanup = await locationService.startBroadcasting(
@@ -132,7 +133,7 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 getCurrentLocation,
                 20000, // Update every 20 seconds (relaxed from 10s)
                 session.user.currentMode,
-                !isGhost // isVisible is true if NOT in ghost mode
+                visibilityToSet // isVisible
             );
 
             setBroadcastCleanup(() => cleanup);
@@ -151,7 +152,7 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             try {
                 if (newVisibility) {
                     // Becoming visible: start broadcasting location
-                    await startLocationBroadcast();
+                    await startLocationBroadcast(true);
                 } else {
                     // Becoming invisible: stop broadcasting
                     if (broadcastCleanup) {
