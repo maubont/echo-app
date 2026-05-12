@@ -126,6 +126,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 id: user.id,
                 email: user.email,
                 name: user.user_metadata?.name || user.email?.split('@')[0] || 'Usuario',
+                role: (user.user_metadata?.role || 'person').toLowerCase(),
+                current_mode: (user.user_metadata?.currentMode || 'networking').toLowerCase(),
                 avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.avatarUrl || `https://ui-avatars.com/api/?name=${user.email}`,
                 updated_at: new Date().toISOString()
             };
