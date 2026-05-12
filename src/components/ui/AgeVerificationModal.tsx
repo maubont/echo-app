@@ -13,10 +13,10 @@ export const AgeVerificationModal = ({ isOpen, onConfirm, onCancel }: AgeVerific
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
             <div className="bg-gray-900 rounded-3xl max-w-sm w-full shadow-2xl border border-red-500/20 overflow-hidden animate-in zoom-in duration-300">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-red-600 to-rose-700 p-5 text-center relative">
+                <div className="bg-linear-to-r from-red-600 to-rose-700 p-5 text-center relative">
                     <button onClick={onCancel} className="absolute top-3 right-3 text-white/60 hover:text-white p-1">
                         <X size={18} />
                     </button>

@@ -145,6 +145,9 @@ class LocationService {
         let errorCount = 0;
         const MAX_ERRORS = 5; // Increased tolerance
 
+        // Optimistically update visibility in DB so UI reacts instantly
+        await this.setVisibility(isVisible);
+
         const updateLocation = async () => {
             try {
                 const position = await getCurrentLocation();

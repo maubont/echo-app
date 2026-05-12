@@ -72,7 +72,7 @@ export const ReportModal = ({ isOpen, reportedUserId, reportedUserName, reporter
     // Step: Done
     if (step === 'done') {
         return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
+            <div className="fixed inset-0 z-100 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
                 <div className="bg-theme-card rounded-3xl max-w-sm w-full p-8 text-center shadow-2xl border" style={{ borderColor: 'rgb(var(--glass-border))' }}>
                     <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <span className="text-3xl">✅</span>
@@ -88,7 +88,7 @@ export const ReportModal = ({ isOpen, reportedUserId, reportedUserName, reporter
     // Step: Block confirmation
     if (step === 'block') {
         return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
+            <div className="fixed inset-0 z-100 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
                 <div className="bg-theme-card rounded-3xl max-w-sm w-full p-6 shadow-2xl border" style={{ borderColor: 'rgb(var(--glass-border))' }}>
                     <div className="text-center mb-5">
                         <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -110,7 +110,7 @@ export const ReportModal = ({ isOpen, reportedUserId, reportedUserName, reporter
 
     // Step: Report form
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}>
             <div className="bg-theme-card rounded-3xl max-w-sm w-full shadow-2xl border overflow-hidden" style={{ borderColor: 'rgb(var(--glass-border))' }}>
                 {/* Header */}
                 <div className="p-5 flex items-center justify-between border-b" style={{ borderColor: 'rgb(var(--glass-border))' }}>
